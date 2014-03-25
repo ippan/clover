@@ -1,0 +1,40 @@
+{
+  "name": "Clover",
+  "version": "0.0.1",
+
+  "author": "PanPan",
+
+  "description": "a toy language",
+
+  "licenses": [{
+    "type": "MIT",
+    "url": "https://raw.github.com/ippan/clover/master/LICENSE"
+  }],
+
+  "repository" : {
+    "type": "git",
+    "url": "https://github.com/ippan/clover.git"
+  },
+
+  "keywords": [
+    "script",
+    "parser"
+  ],
+
+  "dependencies": {
+    "coffee-script": ">= 1.6.3",
+    "mocha": ">= 1.x",
+    "should": ">= 3.1.x"
+  },
+
+  "engines": {
+    "node": ">= 0.8.x",
+    "npm": ">= 1.1.x"
+  },
+
+  "main": "./index",
+
+  "bin": {
+    "clover": "./bin/clover"
+  }
+}
