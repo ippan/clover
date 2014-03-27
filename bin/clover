@@ -1,3 +1,12 @@
 #!/usr/bin/env coffee
 
-Clover = require '../main'
+clover = require '../main'
+fs = require 'fs'
+
+# TODO : implement a cli
+
+filename = process.argv[2]
+code = fs.readFileSync filename, 'utf8'
+
+node = clover.parser.parse(code)
+node.dump()

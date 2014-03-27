@@ -1,19 +1,43 @@
-class Program
-  constructor: (@nodes)->
+Node = {}
 
-  dump: ->
-    for node in @nodes
-      node.dump()
+class Node.Program
+  constructor: (@expressions)->
 
-exports.Program = Program
-
-
-class Assign
+class Node.BinaryOperation
   constructor: (@first, @second)->
 
-  dump: ->
-    console.log "#{@first} = #{@second}"
+  operator: ''
 
-exports.Assign = Assign
+class Node.Assign extends Node.BinaryOperation
+  operator: '='
 
+class Node.Plus extends Node.BinaryOperation
+  operator: '+'
 
+class Node.Minus extends Node.BinaryOperation
+  operator: '-'
+
+class Node.Multiply extends Node.BinaryOperation
+  operator: '*'
+
+class Node.Divide extends Node.BinaryOperation
+  operator: '/'
+
+class Node.Identifier
+  constructor: (@name)->
+
+class Node.Number
+  constructor: (@number)->
+
+class Node.String
+  constructor: (@string)->
+
+class Node.Uminus
+  constructor: (@node)->
+
+class Node.Function
+  constructor: (@expressions, @parameters)->
+
+require('./debug').apply Node
+
+exports.Node = Node

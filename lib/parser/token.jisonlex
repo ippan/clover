@@ -8,7 +8,21 @@ DIGIT [0-9]
 // space
 [ \r\t]+ // skip
 
-[\n] return 'NEW_LINE'
+\n return 'NEW_LINE'
+
+// keyword
+'function'
+|'end'
+|'if'
+|'and'
+|'or'
+|'true'
+|'false'
+|'null'
+|'class'
+|'extends'
+|'enum'
+|'while' return yytext.toUpperCase()
 
 // number
 {DIGIT}+(\.{DIGIT}+)? return 'NUMBER'
@@ -22,6 +36,8 @@ DIGIT [0-9]
 
 // multi-character operator
 //(\|\||&&|[<]=|[>]=|==|!=|\+=|-=|\*=|\/=) return yytext
+
+(\|\||\&\&|[<]\=|[>]\=|\=\=|\!\=|\+\=|\-\=|\*\=|\/\=) return yytext
 
 // operator
 . return yytext

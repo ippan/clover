@@ -1,12 +1,21 @@
 
 %{
-  var node = require('../node/node')
+  var Node = require('../node/node').Node
 %}
+
+%left ','
+%right '='
+%right '+=' '-='
+%right '*=' '/='
+%left '+' '-'
+%left '*' '/'
+%left '.'
+%nonassoc UMINUS
 
 %%
 
 program:
-  expressions EOF { return new node.Program($1) }
+  expressions EOF { return new Node.Program($1) }
 ;
 
 expressions:
@@ -17,15 +26,45 @@ expressions:
 ;
 
 expression:
-  assign_statment
+  operator
+| assign_statment
+| function
+;
+
+
+operator:
+  expression '+' expression { $$ = new Node.Plus($1, $3) }
+| expression '-' expression { $$ = new Node.Minus($1, $3) }
+| expression '*' expression { $$ = new Node.Multiply($1, $3) }
+| expression '/' expression { $$ = new Node.Divide($1, $3) }
+| '-' expression %prec UMINUS { $$ = new Node.Uminus($2) }
 | factor
 ;
 
 assign_statment:
-  IDENTIFIER '=' factor { $$ = new node.Assign($1, $3) }
+  expression '=' expression { $$ = new Node.Assign($1, $3) }
+| expression '+=' expression { $$ = new Node.Assign($1, new Node.Plus($1, $3)) }
+| expression '-=' expression { $$ = new Node.Assign($1, new Node.Minus($1, $3)) }
+| expression '*=' expression { $$ = new Node.Assign($1, new Node.Multiply($1, $3)) }
+| expression '/=' expression { $$ = new Node.Assign($1, new Node.Divide($1, $3)) }
 ;
 
 factor:
-  NUMBER { $$ = $1 }
-| STRING { $$ = $1 }
+  NUMBER { $$ = new Node.Number($1) }
+| STRING { $$ = new Node.String($1) }
+| identifier
+;
+
+identifier:
+  IDENTIFIER { $$ = new Node.Identifier($1) }
+;
+
+function:
+FUNCTION identifier '(' parameter_names ')' expressions END { $$ = new Node.Assign($2, new Node.Function($6, $4)) }
+;
+
+parameter_names:
+{ $$ = [] }
+| identifier { $$ = [ $1 ] }
+| parameter_names "," identifier { $$ = $1.concat($3) }
 ;
