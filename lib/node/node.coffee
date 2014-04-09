@@ -38,6 +38,12 @@ class Node.Uminus
 class Node.Function
   constructor: (@expressions, @parameters)->
 
+class Node.FunctionCall
+  constructor: (@function, @parameters)->
+
+class Node.GetMember
+  constructor: (@instance, @member)->
+
 require('./debug').apply Node
 
 exports.Node = Node

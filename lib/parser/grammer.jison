@@ -31,7 +31,6 @@ expression:
 | function
 ;
 
-
 operator:
   expression '+' expression { $$ = new Node.Plus($1, $3) }
 | expression '-' expression { $$ = new Node.Minus($1, $3) }
@@ -53,6 +52,8 @@ factor:
   NUMBER { $$ = new Node.Number($1) }
 | STRING { $$ = new Node.String($1) }
 | identifier
+| factor '.' identifier { $$ = new Node.GetMember($1, $3) }
+| function_call
 ;
 
 identifier:
@@ -60,11 +61,21 @@ identifier:
 ;
 
 function:
-FUNCTION identifier '(' parameter_names ')' expressions END { $$ = new Node.Assign($2, new Node.Function($6, $4)) }
+  FUNCTION identifier '(' parameter_names ')' expressions END { $$ = new Node.Assign($2, new Node.Function($6, $4)) }
 ;
 
 parameter_names:
 { $$ = [] }
 | identifier { $$ = [ $1 ] }
-| parameter_names "," identifier { $$ = $1.concat($3) }
+| parameter_names ',' identifier { $$ = $1.concat($3) }
+;
+
+function_call:
+  factor '(' parameters ')' { $$ = new Node.FunctionCall($1, $3) }
+;
+
+parameters:
+{ $$ = [] }
+| factor { $$ = [ $1 ] }
+| parameters ',' factor { $$ = $1.concat($3) }
 ;

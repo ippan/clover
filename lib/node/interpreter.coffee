@@ -1,4 +1,4 @@
-apply = (Node, Context)->
+apply = (Node, Runtime)->
 
   Node.Program::execute(context) = ->
     for expresstion in @expresstions

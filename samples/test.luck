@@ -13,3 +13,7 @@ function test(a, b, c)
   a += 1
 
 end
+
+a = a + a.b.c.d
+
+a = c.b(1, 2, 3)

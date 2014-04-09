@@ -39,5 +39,19 @@ apply = (Node)->
         process.stdout.write "\n"
     process.stdout.write "end"
 
+  Node.GetMember::dump = ->
+    @instance.dump()
+    process.stdout.write '.'
+    @member.dump()
+
+  Node.FunctionCall::dump = ->
+    @function.dump()
+    process.stdout.write '('
+
+    for parameter, i in @parameters
+      parameter.dump()
+      process.stdout.write(', ') if i < @parameters.length - 1
+
+    process.stdout.write ')'
 
 exports.apply = apply
