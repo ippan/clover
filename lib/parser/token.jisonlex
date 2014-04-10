@@ -22,6 +22,7 @@ DIGIT [0-9]
 |'class'
 |'extends'
 |'enum'
+|'new'
 |'while' return yytext.toUpperCase()
 
 // number

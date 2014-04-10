@@ -39,6 +39,20 @@ apply = (Node)->
         process.stdout.write "\n"
     process.stdout.write "end"
 
+  Node.Class::dump = ->
+    process.stdout.write 'class'
+
+    if @extends
+      process.stdout.write ' extends '
+      @extends.dump()
+
+    process.stdout.write "\n"
+
+    for expression in @expressions
+        expression.dump()
+        process.stdout.write "\n"
+    process.stdout.write "end"
+
   Node.GetMember::dump = ->
     @instance.dump()
     process.stdout.write '.'
@@ -54,4 +68,11 @@ apply = (Node)->
 
     process.stdout.write ')'
 
+  Node.NewClass::dump = ->
+    @class.dump()
+    process.stdout.write '.new('
+    for parameter, i in @parameters
+      parameter.dump()
+      process.stdout.write(', ') if i < @parameters.length - 1
+    process.stdout.write ')'
 exports.apply = apply

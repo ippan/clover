@@ -7,13 +7,35 @@ b = -3
 
 a += 1 + 2 / 3
 
-
-function test(a, b, c)
-
-  a += 1
-
-end
-
 a = a + a.b.c.d
 
 a = c.b(1, 2, 3)
+
+
+hello = function(e, f, g)
+  
+  f = g 
+
+end
+
+help = class
+
+  a = 1
+
+  b = function(a, b)
+    a + b
+  end
+
+end
+
+test_ex = class extends help
+  
+  c = 2
+
+  d = function(e, f)
+    e - f
+  end
+
+end
+
+a = test_ex.new()

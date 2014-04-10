@@ -29,6 +29,7 @@ expression:
   operator
 | assign_statment
 | function
+| class
 ;
 
 operator:
@@ -54,6 +55,7 @@ factor:
 | identifier
 | factor '.' identifier { $$ = new Node.GetMember($1, $3) }
 | function_call
+| new_class
 ;
 
 identifier:
@@ -61,7 +63,12 @@ identifier:
 ;
 
 function:
-  FUNCTION identifier '(' parameter_names ')' expressions END { $$ = new Node.Assign($2, new Node.Function($6, $4)) }
+  FUNCTION '(' parameter_names ')' expressions END { $$ = new Node.Function($5, $3) }
+;
+
+class:
+  CLASS expressions END { $$ = new Node.Class($2) }
+| CLASS EXTENDS factor expressions END { $$ = new Node.Class($4, $3) }
 ;
 
 parameter_names:
@@ -72,6 +79,10 @@ parameter_names:
 
 function_call:
   factor '(' parameters ')' { $$ = new Node.FunctionCall($1, $3) }
+;
+
+new_class:
+  factor '.' NEW '(' parameters ')' { $$ = new Node.NewClass($1, $5) }
 ;
 
 parameters:

@@ -38,8 +38,14 @@ class Node.Uminus
 class Node.Function
   constructor: (@expressions, @parameters)->
 
+class Node.Class
+  constructor: (@expressions, @extends)->
+
 class Node.FunctionCall
   constructor: (@function, @parameters)->
+
+class Node.NewClass
+  constructor: (@class, @parameters)->
 
 class Node.GetMember
   constructor: (@instance, @member)->
