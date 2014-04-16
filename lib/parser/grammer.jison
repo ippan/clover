@@ -1,6 +1,12 @@
 
 %{
   var Node = require('../node/node').Node
+  exports.Node = Node
+
+  var Runtime = require('../runtime/runtime').Runtime
+  require('../node/interpreter').apply(Node, Runtime)
+
+  exports.Runtime = Runtime
 %}
 
 %left ','

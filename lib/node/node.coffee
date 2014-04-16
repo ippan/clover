@@ -9,18 +9,23 @@ class Node.BinaryOperation
   operator: ''
 
 class Node.Assign extends Node.BinaryOperation
+  op_method: 'op_assign'
   operator: '='
 
 class Node.Plus extends Node.BinaryOperation
+  op_method: 'op_plus'
   operator: '+'
 
 class Node.Minus extends Node.BinaryOperation
+  op_method: 'op_minus'
   operator: '-'
 
 class Node.Multiply extends Node.BinaryOperation
+  op_method: 'op_multiply'
   operator: '*'
 
 class Node.Divide extends Node.BinaryOperation
+  op_method: 'op_divide'
   operator: '/'
 
 class Node.Identifier
