@@ -20,6 +20,10 @@ apply = (Runtime)->
 
 
   class Runtime.GlobalContext extends Runtime.Context
+    constructor: ->
+      super()
+      # TODO : for test only, remove later
+      @set 'print', new Runtime.PrintFunction()
 
 
 

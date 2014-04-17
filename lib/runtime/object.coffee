@@ -42,4 +42,18 @@ apply = (Runtime)->
       new Runtime.String(@string)
 
 
+  class Runtime.Function extends Runtime.Object
+
+
+  class Runtime.NativeFunction extends Runtime.Function
+
+    call: (parameters)->
+
+
+  # TODO : for test only, remove later
+  class Runtime.PrintFunction extends Runtime.NativeFunction
+    call: (context, parameters)->
+      console.log parameters[0].to_string()
+
+
 exports.apply = apply

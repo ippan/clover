@@ -19,4 +19,8 @@ apply = (Node, Runtime)->
   Node.Identifier::execute = (context)->
     context.get @name
 
+
+  Node.FunctionCall::execute = (context)->
+    @function.call context, @parameters
+
 exports.apply = apply
