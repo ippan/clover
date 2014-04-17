@@ -4,7 +4,7 @@ merge = (source, target)->
   for key, value of source
     target[key] = value
 
-merge require('./context').Runtime, runtime
-merge require('./object').Runtime, runtime
+require('./context').apply runtime
+require('./object').apply runtime
 
 exports.Runtime = runtime

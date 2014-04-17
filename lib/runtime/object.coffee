@@ -1,39 +1,45 @@
-Runtime = {}
+apply = (Runtime)->
 
-class Runtime.Object
+  class Runtime.Object
 
+    op_assign: (target)->
+      if @identifier? and @context?
+        @context.set(@identifier, target)
 
+    bind: (@context, @name)->
+      this
 
-
-
-class Runtime.Number extends Runtime.Object
-  initialize: (@number = 0)->
-
-  op_plus: (target)->
-    new Runtime.Number(@number + target.number)
-
-  op_minus: (target)->
-    new Runtime.Number(@number - target.number)
-
-  op_multiply: (target)->
-    new Runtime.Number(@number * target.number)
-
-  op_divide: (target)->
-    new Runtime.Number(@number / target.number)  
-
-  to_string: ->
-    new Runtime.String(@number.toString())
+  class Runtime.Nil extends Runtime.Object
 
 
-class Runtime.String extends Runtime.Object
-  initialize: (@string = '')->
+
+  class Runtime.Number extends Runtime.Object
+    constructor: (@number = 0)->
+
+    op_plus: (target)->
+      new Runtime.Number(@number + target.number)
+
+    op_minus: (target)->
+      new Runtime.Number(@number - target.number)
+
+    op_multiply: (target)->
+      new Runtime.Number(@number * target.number)
+
+    op_divide: (target)->
+      new Runtime.Number(@number / target.number)  
+
+    to_string: ->
+      new Runtime.String(@number.toString())
 
 
-  op_plus: (target)->
-    new Runtime.String("#{ @string }#{ target.to_string().string }")
+  class Runtime.String extends Runtime.Object
+    constructor: (string = '')->
 
-  to_string: ->
-    new Runtime.String(@string)
+    op_plus: (target)->
+      new Runtime.String("#{ @string }#{ target.to_string().string }")
+
+    to_string: ->
+      new Runtime.String(@string)
 
 
-exports.Runtime = Runtime
+exports.apply = apply
