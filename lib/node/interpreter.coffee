@@ -9,7 +9,7 @@ apply = (Node, Runtime)->
 
 
   Node.Number::execute = (context)->
-    new Runtime.Number(@number)
+    new Runtime.Number(Number(@number))
 
   
   Node.BinaryOperation::execute = (context)->
@@ -21,6 +21,11 @@ apply = (Node, Runtime)->
 
 
   Node.FunctionCall::execute = (context)->
-    @function.call context, @parameters
+    parameters = []
+
+    for parameter in @parameters
+      parameters.push parameter.execute(context)
+
+    @function.execute(context).call context, parameters
 
 exports.apply = apply

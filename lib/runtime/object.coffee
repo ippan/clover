@@ -6,7 +6,7 @@ apply = (Runtime)->
       if @identifier? and @context?
         @context.set(@identifier, target)
 
-    bind: (@context, @name)->
+    bind: (@context, @identifier)->
       this
 
   class Runtime.Nil extends Runtime.Object
@@ -33,7 +33,7 @@ apply = (Runtime)->
 
 
   class Runtime.String extends Runtime.Object
-    constructor: (string = '')->
+    constructor: (@string = '')->
 
     op_plus: (target)->
       new Runtime.String("#{ @string }#{ target.to_string().string }")
@@ -53,7 +53,7 @@ apply = (Runtime)->
   # TODO : for test only, remove later
   class Runtime.PrintFunction extends Runtime.NativeFunction
     call: (context, parameters)->
-      console.log parameters[0].to_string()
+      console.log parameters[0].to_string().string
 
 
 exports.apply = apply
