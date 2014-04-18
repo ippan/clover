@@ -55,6 +55,7 @@ apply = (Runtime)->
   class Runtime.PrintFunction extends Runtime.NativeFunction
     call: (parameters)->
       console.log parameters[0].to_string().string
+      null
 
 
   class Runtime.Function extends Runtime.Callable
@@ -69,8 +70,11 @@ apply = (Runtime)->
         function_context.set_local parameter[0], parameters[i] || parameter[1]
         i += 1
 
+      result = null
       for expression in @expressions
-        expression.execute function_context
+        result = expression.execute function_context
+
+      result
 
 
 exports.apply = apply

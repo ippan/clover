@@ -40,6 +40,6 @@ apply = (Node, Runtime)->
     for parameter in @parameters
       parameters.push parameter.execute(context)
 
-    @function.execute(context).call parameters
+    @function.execute(context).call(parameters) || new Runtime.Nil()
 
 exports.apply = apply
