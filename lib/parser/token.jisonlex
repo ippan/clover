@@ -1,5 +1,5 @@
 DIGIT [0-9]
-KEYWORD 'function'|'end'|'if'|'else'|'and'|'or'|'true'|'false'|'null'|'class'|'extends'|'new'|'base'|'while'
+KEYWORD 'function'|'end'|'if'|'else'|'elseif'|'and'|'or'|'true'|'false'|'null'|'class'|'extends'|'new'|'base'|'while'
 
 %%
 

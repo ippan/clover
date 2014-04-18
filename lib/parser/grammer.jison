@@ -32,11 +32,23 @@ expressions:
 ;
 
 expression:
-  operator
+  literal
+| new_class
+| function_call
+| operator
+| factor
 | assign_statment
 | if_statment
 | function
 | class
+| '(' expression ')' { $$ = $2 }
+;
+
+literal:
+  NUMBER { $$ = new Node.Number(Number($1)) }
+| STRING { $$ = new Node.String($1) }
+| NULL { $$ = new Node.Null() }
+| boolean
 ;
 
 operator:
@@ -45,12 +57,15 @@ operator:
 | expression '*' expression { $$ = new Node.Multiply($1, $3) }
 | expression '/' expression { $$ = new Node.Divide($1, $3) }
 | '-' expression %prec UMINUS { $$ = new Node.Uminus($2) }
-| factor
 ;
 
 if_statment:
-  IF expression NEW_LINE expressions END { $$ = new Node.IfElse($2, $4) }
-| IF expression NEW_LINE expressions ELSE expressions END { $$ = new Node.IfElse($2, $4, $6) }
+  IF expression NEW_LINE expressions else_part END { $$ = new Node.IfElse($2, $4, $5) }
+;
+
+else_part:
+{ $$ = null }
+| ELSE expressions { $$ = $2 }
 ;
 
 assign_statment:
@@ -62,15 +77,9 @@ assign_statment:
 ;
 
 factor:
-  NUMBER { $$ = new Node.Number(Number($1)) }
-| STRING { $$ = new Node.String($1) }
-| NULL { $$ = new Node.Null() }
-| boolean
-| identifier
+  identifier
 | BASE '.' identifier { $$ = new Node.BaseGetMember($3) }
 | factor '.' identifier { $$ = new Node.GetMember($1, $3) }
-| function_call
-| new_class
 ;
 
 boolean:
@@ -107,6 +116,6 @@ new_class:
 
 parameters:
 { $$ = [] }
-| factor { $$ = [ $1 ] }
-| parameters ',' factor { $$ = $1.concat($3) }
+| expression { $$ = [ $1 ] }
+| parameters ',' expression { $$ = $1.concat($3) }
 ;

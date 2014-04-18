@@ -16,7 +16,7 @@ MyClass = class extends MyBaseClass
   say = function()
     temp = ''
     value = null
-    if value
+    if true
       temp = base.say() + "yes"
     else
       temp = base.say() + "no"
@@ -29,3 +29,5 @@ end
 test = MyClass.new('hihi')
 
 print(test.say())
+
+print((1 + 2) * 5)
