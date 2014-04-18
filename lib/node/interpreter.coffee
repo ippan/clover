@@ -9,7 +9,13 @@ apply = (Node, Runtime)->
 
 
   Node.Number::execute = (context)->
-    new Runtime.Number(Number(@number))
+    new Runtime.Number(@number)
+
+  Node.String::execute = (context)->
+
+
+
+    new Runtime.String(@string.substring(1, @string.length - 1))
 
   
   Node.BinaryOperation::execute = (context)->
@@ -19,6 +25,14 @@ apply = (Node, Runtime)->
   Node.Identifier::execute = (context)->
     context.get @name
 
+  Node.Function::execute = (context)->
+
+    parameters = []
+    # TODO : add defulat parameter support
+    for parameter in @parameters
+      parameters.push [ parameter.name, new Runtime.Nil() ]
+
+    new Runtime.Function(context, @expressions, parameters)
 
   Node.FunctionCall::execute = (context)->
     parameters = []
@@ -26,6 +40,6 @@ apply = (Node, Runtime)->
     for parameter in @parameters
       parameters.push parameter.execute(context)
 
-    @function.execute(context).call context, parameters
+    @function.execute(context).call parameters
 
 exports.apply = apply

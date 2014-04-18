@@ -56,7 +56,7 @@ assign_statment:
 ;
 
 factor:
-  NUMBER { $$ = new Node.Number($1) }
+  NUMBER { $$ = new Node.Number(Number($1)) }
 | STRING { $$ = new Node.String($1) }
 | identifier
 | factor '.' identifier { $$ = new Node.GetMember($1, $3) }

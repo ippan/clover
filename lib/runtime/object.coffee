@@ -42,18 +42,35 @@ apply = (Runtime)->
       new Runtime.String(@string)
 
 
-  class Runtime.Function extends Runtime.Object
+  class Runtime.Callable extends Runtime.Object
+    call: (parameters)->
 
 
-  class Runtime.NativeFunction extends Runtime.Function
+  class Runtime.NativeFunction extends Runtime.Callable
 
     call: (parameters)->
 
 
   # TODO : for test only, remove later
   class Runtime.PrintFunction extends Runtime.NativeFunction
-    call: (context, parameters)->
+    call: (parameters)->
       console.log parameters[0].to_string().string
+
+
+  class Runtime.Function extends Runtime.Callable
+    constructor: (@scrope_context, @expressions, @parameters)->
+      @global_context = @scrope_context.global_context || @scrope_context
+
+    call: (parameters)->
+      function_context = new Runtime.FunctionContext(@global_context, @scrope_context)
+
+      i = 0
+      for parameter in @parameters
+        function_context.set_local parameter[0], parameters[i] || parameter[1]
+        i += 1
+
+      for expression in @expressions
+        expression.execute function_context
 
 
 exports.apply = apply

@@ -4,3 +4,24 @@ a = 1 + 2
 b = a + 1
 
 print(b)
+
+c = 'test'
+
+d = c + 5
+
+e = d + d
+
+print(e)
+
+
+test = function(a, b, c)
+  print(a)
+  print(b)
+  print(c)
+end
+
+test('h', 'i', 'j')
+
+print(a)
+print(b)
+print(c)
