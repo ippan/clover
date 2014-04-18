@@ -1,8 +1,13 @@
 # Clover
 
-a toy language created in CoffeeScript~
+a toy object-oriented language created in CoffeeScript~
 
 still in development~
+
+### features
+* classes & inheritance
+* first class function
+* closure 
 
 ## Example
 
@@ -23,8 +28,7 @@ still in development~
     MyClass = class extends MyBaseClass
 
       say = function()
-        base.say()
-        base.say()
+        base.say() + base.say()
       end
 
     end

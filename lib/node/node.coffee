@@ -31,6 +31,11 @@ class Node.Divide extends Node.BinaryOperation
 class Node.Identifier
   constructor: (@name)->
 
+class Node.Null
+
+class Node.Boolean
+  constructor: (@boolean)->
+
 class Node.Number
   constructor: (@number)->
 
@@ -54,6 +59,9 @@ class Node.NewClass
 
 class Node.GetMember
   constructor: (@instance, @member)->
+
+class Node.BaseGetMember
+  constructor: (@member)->
 
 require('./debug').apply Node
 

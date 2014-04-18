@@ -1,4 +1,5 @@
 DIGIT [0-9]
+KEYWORD 'function'|'end'|'if'|'and'|'or'|'true'|'false'|'null'|'class'|'extends'|'new'|'base'|'while'
 
 %%
 
@@ -10,20 +11,10 @@ DIGIT [0-9]
 
 \n return 'NEW_LINE'
 
+{KEYWORD}+[\w\_]+ return 'IDENTIFIER'
+
 // keyword
-'function'
-|'end'
-|'if'
-|'and'
-|'or'
-|'true'
-|'false'
-|'null'
-|'class'
-|'extends'
-|'enum'
-|'new'
-|'while' return yytext.toUpperCase()
+{KEYWORD} return yytext.toUpperCase()
 
 // number
 {DIGIT}+(\.{DIGIT}+)? return 'NUMBER'
@@ -33,11 +24,9 @@ DIGIT [0-9]
 \'[^']*\' return 'STRING'
 
 // identifier
-[a-zA-Z_][\w\_]* return 'IDENTIFIER'
+[a-zA-Z\_][\w\_]* return 'IDENTIFIER'
 
 // multi-character operator
-//(\|\||&&|[<]=|[>]=|==|!=|\+=|-=|\*=|\/=) return yytext
-
 (\|\||\&\&|[<]\=|[>]\=|\=\=|\!\=|\+\=|\-\=|\*\=|\/\=) return yytext
 
 // operator

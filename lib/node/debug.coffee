@@ -14,6 +14,12 @@ apply = (Node)->
   Node.Identifier::dump = ->
     process.stdout.write @name
 
+  Node.Null::dump = ->
+    process.stdout.write 'null'
+
+  Node.Boolean::dump = ->
+    process.stdout.write @boolean
+
   Node.Number::dump = ->
     process.stdout.write @number
 
@@ -55,6 +61,10 @@ apply = (Node)->
 
   Node.GetMember::dump = ->
     @instance.dump()
+    process.stdout.write '.'
+    @member.dump()
+
+  Node.BaseGetMember::dump = ->
     process.stdout.write '.'
     @member.dump()
 

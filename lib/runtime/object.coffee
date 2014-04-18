@@ -3,15 +3,36 @@ apply = (Runtime)->
   class Runtime.Object
 
     op_assign: (target)->
-      if @identifier? and @context?
-        @context.set(@identifier, target)
+      if @identifier? and @environment?
+        @environment.set(@identifier, target)
 
-    bind: (@context, @identifier)->
+    bind: (@environment, @identifier)->
       this
 
-  class Runtime.Nil extends Runtime.Object
+    to_string: ->
+      new Runtime.String('object')
 
+    get: (name)->
+      this[name]
 
+    to_bool: ->
+      new Runtime.Boolean(true)
+
+  class Runtime.Null extends Runtime.Object
+    to_bool: ->
+      new Runtime.Boolean(false)
+
+    to_string: ->
+      new Runtime.String('null')
+
+  class Runtime.Boolean extends Runtime.Object
+    constructor: (@boolean = true)->
+
+    to_string: ->
+      new Runtime.String(@boolean.toString())
+
+    to_bool: ->
+      this
 
   class Runtime.Number extends Runtime.Object
     constructor: (@number = 0)->
@@ -39,7 +60,7 @@ apply = (Runtime)->
       new Runtime.String("#{ @string }#{ target.to_string().string }")
 
     to_string: ->
-      new Runtime.String(@string)
+      this
 
 
   class Runtime.Callable extends Runtime.Object
@@ -57,13 +78,17 @@ apply = (Runtime)->
       console.log parameters[0].to_string().string
       null
 
+  class Runtime.DumpFunction extends Runtime.NativeFunction
+    call: (parameters)->
+      console.log parameters[0]
+      null
 
   class Runtime.Function extends Runtime.Callable
-    constructor: (@scrope_context, @expressions, @parameters)->
-      @global_context = @scrope_context.global_context || @scrope_context
+    constructor: (@scope_context, @expressions, @parameters)->
+      @global_context = @scope_context.global_context || @scope_context
 
     call: (parameters)->
-      function_context = new Runtime.FunctionContext(@global_context, @scrope_context)
+      function_context = new Runtime.FunctionContext(@global_context, @scope_context, @environment)
 
       i = 0
       for parameter in @parameters
@@ -75,6 +100,24 @@ apply = (Runtime)->
         result = expression.execute function_context
 
       result
+
+  class Runtime.Class extends Runtime.Object
+    constructor: (context, @expressions, @extends)->
+      parent = @extends && @extends.execute(context)
+      parent_context = parent.context if parent
+
+      @context = new Runtime.ClassContext(context.global_context || context, parent_context)
+      @context.building = true
+      expression.execute(@context) for expression in @expressions
+      @context.building = false
+
+
+  class Runtime.Instance extends Runtime.Object
+    constructor: (@class, context)->
+      @context = new Runtime.InstanceContext(@class.context, context.global_context || context)
+
+    get: (name)->
+      @context.get name
 
 
 exports.apply = apply

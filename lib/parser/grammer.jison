@@ -58,10 +58,18 @@ assign_statment:
 factor:
   NUMBER { $$ = new Node.Number(Number($1)) }
 | STRING { $$ = new Node.String($1) }
+| NULL { $$ = new Node.Null() }
+| boolean
 | identifier
+| BASE '.' identifier { $$ = new Node.BaseGetMember($3) }
 | factor '.' identifier { $$ = new Node.GetMember($1, $3) }
 | function_call
 | new_class
+;
+
+boolean:
+  TRUE { $$ = new Node.Boolean(true) }
+| FALSE { $$ = new Node.Boolean(false) }
 ;
 
 identifier:
