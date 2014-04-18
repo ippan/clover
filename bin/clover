@@ -11,6 +11,4 @@ code = fs.readFileSync filename, 'utf8'
 node = clover.parser.parse(code)
 # node.dump()
 
-
-
 node.execute()

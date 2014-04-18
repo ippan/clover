@@ -1,3 +1,8 @@
+dump_expressions = (expressions)->
+  for expression in expressions
+    expression.dump()
+    process.stdout.write "\n"
+
 apply = (Node)->
   Node.Program::dump = ->
     for expression in @expressions
@@ -18,7 +23,7 @@ apply = (Node)->
     process.stdout.write 'null'
 
   Node.Boolean::dump = ->
-    process.stdout.write @boolean
+    process.stdout.write @boolean.toString()
 
   Node.Number::dump = ->
     process.stdout.write @number
@@ -39,10 +44,7 @@ apply = (Node)->
       process.stdout.write(', ') if i < @parameters.length - 1
 
     process.stdout.write ")\n"
-
-    for expression in @expressions
-        expression.dump()
-        process.stdout.write "\n"
+    dump_expressions @expressions        
     process.stdout.write "end"
 
   Node.Class::dump = ->
@@ -53,10 +55,7 @@ apply = (Node)->
       @extends.dump()
 
     process.stdout.write "\n"
-
-    for expression in @expressions
-        expression.dump()
-        process.stdout.write "\n"
+    dump_expressions @expressions
     process.stdout.write "end"
 
   Node.GetMember::dump = ->
@@ -65,7 +64,7 @@ apply = (Node)->
     @member.dump()
 
   Node.BaseGetMember::dump = ->
-    process.stdout.write '.'
+    process.stdout.write 'base.'
     @member.dump()
 
   Node.FunctionCall::dump = ->
@@ -77,6 +76,14 @@ apply = (Node)->
       process.stdout.write(', ') if i < @parameters.length - 1
 
     process.stdout.write ')'
+
+  Node.IfElse::dump = ->
+    process.stdout.write 'if '
+    @condition.dump()
+    process.stdout.write "\n"
+    dump_expressions @true_part
+    process.stdout.write "else\n"
+    dump_expressions @false_part
 
   Node.NewClass::dump = ->
     @class.dump()

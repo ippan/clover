@@ -63,6 +63,9 @@ class Node.GetMember
 class Node.BaseGetMember
   constructor: (@member)->
 
+class Node.IfElse
+  constructor: (@condition, @true_part, @false_part)->
+
 require('./debug').apply Node
 
 exports.Node = Node

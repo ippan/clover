@@ -7,49 +7,25 @@ MyBaseClass = class
   end
 end
 
-test = MyBaseClass.new()
-
-print(test.say())
-
 MyClass = class extends MyBaseClass
+
   initialize = function(value)
     word = value
   end
 
   say = function()
-    base.say() + "oh"
+    temp = ''
+    value = null
+    if value
+      temp = base.say() + "yes"
+    else
+      temp = base.say() + "no"
+    end
+    temp
   end
 
 end
 
-test2 = MyClass.new('1234')
+test = MyClass.new('hihi')
 
-hi = print
-
-hi(test2.say())
-
-hi(true)
-hi(false)
-hi(null)
-
-CC = MyClass
-
-outer = function(i)
-  m = i
-  inter = function(time)
-    m = m * time
-    print(m)
-  end
-
-end
-
-g = outer(5)
-
-g(2)
-g(3)
-
-k = outer(3)
-k(5)
-k(6)
-
-g(7)
+print(test.say())

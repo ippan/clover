@@ -80,4 +80,13 @@ apply = (Node, Runtime)->
   Node.BaseGetMember::execute = (context)->
     context.scope_context.base.get(@member.name).bind context.environment, @member.name
 
+  Node.IfElse::execute = (context)->
+    # TODO : use block context
+    if @condition.execute(context).to_bool().boolean
+      for expression in @true_part
+        expression.execute context
+    else
+      for expression in @false_part
+        expression.execute context
+
 exports.apply = apply

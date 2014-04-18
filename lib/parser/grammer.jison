@@ -34,6 +34,7 @@ expressions:
 expression:
   operator
 | assign_statment
+| if_statment
 | function
 | class
 ;
@@ -45,6 +46,11 @@ operator:
 | expression '/' expression { $$ = new Node.Divide($1, $3) }
 | '-' expression %prec UMINUS { $$ = new Node.Uminus($2) }
 | factor
+;
+
+if_statment:
+  IF expression NEW_LINE expressions END { $$ = new Node.IfElse($2, $4) }
+| IF expression NEW_LINE expressions ELSE expressions END { $$ = new Node.IfElse($2, $4, $6) }
 ;
 
 assign_statment:
