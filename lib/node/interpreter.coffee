@@ -29,6 +29,14 @@ apply = (Node, Runtime)->
     else
       first[@op_method](second)
 
+  Node.And::execute = (context)->
+    left = @left.execute(context)
+    left.to_bool().runtime_value and @right.execute(context) or left
+
+  Node.Or::execute = (context)->
+    left = @left.execute(context)
+    left.to_bool().runtime_value and left or @right.execute(context)
+
   Node.Null::execute = (context)->
     new Runtime.Null() 
 
@@ -43,6 +51,17 @@ apply = (Node, Runtime)->
       parameters.push [ parameter, new Runtime.Null() ]
 
     new Runtime.Function(context, @expressions, parameters)
+
+  Node.Uminus::execute = (context)->
+    node = @node.execute(context)
+    if node.has_user_op('op_uminus')
+      op_function = node.get('op_uminus')
+      op_function.call([])
+    else
+      node['op_uminus']()
+
+  Node.Hash::execute = (context)->
+    new Runtime.Hash(context, @key_values)
 
   Node.FunctionCall::execute = (context)->
     parameters = []

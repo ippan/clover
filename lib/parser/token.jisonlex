@@ -26,8 +26,11 @@ KEYWORD 'function'|'end'|'if'|'else'|'elseif'|'and'|'or'|'true'|'false'|'null'|'
 // identifier
 [a-zA-Z\_][\w\_]* return 'IDENTIFIER'
 
+'||' return 'OR'
+'&&' return 'AND'
+
 // multi-character operator
-(\|\||\&\&|[<]\=|[>]\=|\=\=|\!\=|\+\=|\-\=|\*\=|\/\=) return yytext
+([<]\=|[>]\=|\=\=|\!\=|\+\=|\-\=|\*\=|\/\=) return yytext
 
 // operator
 . return yytext

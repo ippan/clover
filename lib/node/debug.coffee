@@ -16,6 +16,20 @@ apply = (Node)->
     @second.dump()
     process.stdout.write ')'
 
+  Node.And::dump = ->
+    process.stdout.write '('
+    @left.dump()
+    process.stdout.write ' and '
+    @right.dump()
+    process.stdout.write ')'
+
+  Node.Or::dump = ->
+    process.stdout.write '('
+    @left.dump()
+    process.stdout.write ' or '
+    @right.dump()
+    process.stdout.write ')'
+
   Node.Null::dump = ->
     process.stdout.write 'null'
 
@@ -23,7 +37,7 @@ apply = (Node)->
     process.stdout.write @boolean.toString()
 
   Node.Number::dump = ->
-    process.stdout.write @number
+    process.stdout.write @number.toString()
 
   Node.String::dump = ->
     process.stdout.write @string
@@ -32,6 +46,17 @@ apply = (Node)->
     process.stdout.write '-'
     @node.dump()
 
+  Node.Hash::dump = ->
+    process.stdout.write "{\n"
+    for key_value, i in @key_values
+      key_value.dump()
+      process.stdout.write(",\n") if i < @key_values.length - 1
+    process.stdout.write "}"
+
+  Node.KeyValue::dump = ->
+    @key.dump()
+    process.stdout.write ": "
+    @value.dump()
 
   Node.Function::dump = ->
     process.stdout.write "function ("

@@ -13,6 +13,8 @@
 %right '='
 %right '+=' '-='
 %right '*=' '/='
+%left OR
+%left AND
 %left '>' '<' 
 %left '+' '-'
 %left '*' '/'
@@ -42,6 +44,7 @@ expression:
 | if_statment
 | function
 | class
+| hash
 | '(' expression ')' { $$ = $2 }
 ;
 
@@ -53,13 +56,32 @@ literal:
 ;
 
 operator:
-  expression '>' expression { $$ = new Node.Greater($1, $3) }
+  expression AND expression { $$ = new Node.And($1, $3) }
+| expression OR expression { $$ = new Node.Or($1, $3) }
+| expression '>' expression { $$ = new Node.Greater($1, $3) }
 | expression '<' expression { $$ = new Node.Less($1, $3) }
 | expression '+' expression { $$ = new Node.Plus($1, $3) }
 | expression '-' expression { $$ = new Node.Minus($1, $3) }
 | expression '*' expression { $$ = new Node.Multiply($1, $3) }
 | expression '/' expression { $$ = new Node.Divide($1, $3) }
 | '-' expression %prec UMINUS { $$ = new Node.Uminus($2) }
+;
+
+hash:
+  '{' key_values '}' { $$ = new Node.Hash($2) }
+;
+
+key_values:
+{ $$ = [] }
+| key_value { $$ = [ $1 ] }
+| key_values ',' key_value { $$ = $1.concat($3) }
+| key_values ',' { $$ = $1 }
+| key_values NEW_LINE key_value { $$ = $1.concat($3) }
+| key_values NEW_LINE { $$ = $1 }
+;
+
+key_value:
+  IDENTIFIER ':' expression { $$ = new Node.KeyValue($1, $3) }
 ;
 
 if_statment:

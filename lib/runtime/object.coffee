@@ -61,6 +61,9 @@ apply = (Runtime)->
     op_less: (target)->
       new Runtime.Boolean(@runtime_value < target.runtime_value)
 
+    op_uminus: ->
+      new Runtime.Number(-@runtime_value)
+
     to_string: ->
       new Runtime.String(@runtime_value.toString())  
 
@@ -113,6 +116,16 @@ apply = (Runtime)->
         result = expression.execute function_context
 
       result
+
+  class Runtime.Hash extends Runtime.Object
+    constructor: (context, key_values)->
+      @context = new Runtime.HashContext(context.global_context || context)
+      for key_value in key_values
+        @context.set_local key_value.key, key_value.value.execute(context)
+
+    get: (name)->
+      @context.get name
+
 
   class Runtime.Class extends Runtime.Object
     constructor: (context, @expressions, @extends)->

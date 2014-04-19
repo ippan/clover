@@ -55,8 +55,11 @@ apply = (Runtime)->
       super(name) || @class_context.try_get(name)
 
     try_set: (name, value)->
-      @set_local(name, value) if @has_local(name) || @class_context.has_local(name)        
+      @set_local(name, value) if @has_local(name) || @class_context.has_local(name)
 
+  class Runtime.HashContext extends Runtime.Context
+    constructor: (@global_context)->
+      super()
 
   class Runtime.FunctionContext extends Runtime.Context
     constructor: (@global_context, @scope_context, @environment)->

@@ -36,6 +36,18 @@ class Node.Less extends Node.BinaryOperation
   op_method: 'op_less'
   operator: '<'
 
+class Node.Hash
+  constructor: (@key_values)->
+
+class Node.KeyValue
+  constructor: (@key, @value)->
+
+class Node.And
+  constructor: (@left, @right)->
+
+class Node.Or
+  constructor: (@left, @right)->
+
 class Node.Null
 
 class Node.Boolean
