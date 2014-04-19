@@ -36,9 +36,6 @@ class Node.Less extends Node.BinaryOperation
   op_method: 'op_less'
   operator: '<'
 
-class Node.Identifier
-  constructor: (@name)->
-
 class Node.Null
 
 class Node.Boolean
@@ -48,7 +45,7 @@ class Node.Number
   constructor: (@number)->
 
 class Node.String
-  constructor: (@string)->
+  constructor: (@string, @translated = false)->
 
 class Node.Uminus
   constructor: (@node)->

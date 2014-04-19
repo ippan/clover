@@ -2,6 +2,7 @@ apply = (Runtime)->
 
   class Runtime.Object
 
+    # TODO : maybe change later, will not store @identifier
     op_assign: (target)->
       if @identifier? and @environment?
         @environment.set(@identifier, target)
@@ -18,6 +19,11 @@ apply = (Runtime)->
     to_bool: ->
       new Runtime.Boolean(true)
 
+    has_user_op: (name)->
+      false
+
+
+
   class Runtime.Null extends Runtime.Object
     to_bool: ->
       new Runtime.Boolean(false)
@@ -26,44 +32,44 @@ apply = (Runtime)->
       new Runtime.String('null')
 
   class Runtime.Boolean extends Runtime.Object
-    constructor: (@boolean = true)->
+    constructor: (@runtime_value = true)->
 
     to_string: ->
-      new Runtime.String(@boolean.toString())
+      new Runtime.String(@runtime_value.toString())
 
     to_bool: ->
       this
 
   class Runtime.Number extends Runtime.Object
-    constructor: (@number = 0)->
+    constructor: (@runtime_value = 0)->
 
     op_plus: (target)->
-      new Runtime.Number(@number + target.number)
+      new Runtime.Number(@runtime_value + target.runtime_value)
 
     op_minus: (target)->
-      new Runtime.Number(@number - target.number)
+      new Runtime.Number(@runtime_value - target.runtime_value)
 
     op_multiply: (target)->
-      new Runtime.Number(@number * target.number)
+      new Runtime.Number(@runtime_value * target.runtime_value)
 
     op_divide: (target)->
-      new Runtime.Number(@number / target.number)  
+      new Runtime.Number(@runtime_value / target.runtime_value)  
 
     op_greater: (target)->      
-      new Runtime.Boolean(@number > target.number)
+      new Runtime.Boolean(@runtime_value > target.runtime_value)
 
     op_less: (target)->
-      new Runtime.Boolean(@number < target.number)
+      new Runtime.Boolean(@runtime_value < target.runtime_value)
 
     to_string: ->
-      new Runtime.String(@number.toString())  
+      new Runtime.String(@runtime_value.toString())  
 
 
   class Runtime.String extends Runtime.Object
-    constructor: (@string = '')->
+    constructor: (@runtime_value = '')->
 
     op_plus: (target)->
-      new Runtime.String("#{ @string }#{ target.to_string().string }")
+      new Runtime.String("#{ @runtime_value }#{ target.to_string().runtime_value }")
 
     to_string: ->
       this
@@ -74,14 +80,15 @@ apply = (Runtime)->
 
 
   class Runtime.NativeFunction extends Runtime.Callable
+    constructor: (@function)->
 
     call: (parameters)->
-
+      @function parameters if @function
 
   # TODO : for test only, remove later
   class Runtime.PrintFunction extends Runtime.NativeFunction
     call: (parameters)->
-      console.log parameters[0].to_string().string
+      console.log parameters[0].to_string().runtime_value
       null
 
   class Runtime.DumpFunction extends Runtime.NativeFunction
@@ -117,6 +124,9 @@ apply = (Runtime)->
       expression.execute(@context) for expression in @expressions
       @context.building = false
 
+    has_user_op: (name)->
+      @context.has_local name
+
 
   class Runtime.Instance extends Runtime.Object
     constructor: (@class, context)->
@@ -124,6 +134,9 @@ apply = (Runtime)->
 
     get: (name)->
       @context.get name
+
+    has_user_op: (name)->
+      @context.has_local(name)
 
 
 exports.apply = apply

@@ -24,32 +24,22 @@ MyClass = class extends MyBaseClass
     temp
   end
 
-end
-
-test = MyClass.new('hihi')
-
-print(test.say())
-
-print((1 + 2) * 5)
-
-
-
-start = function()
-
-  i = 0
-
-  next = function()
-    i = i + 1
-
-    if i < 10
-      print(i)
-      next()
-    end
-
+  op_plus = function(target)
+    'hahahahahaha'
   end
 
-  next()
 end
 
-start()
 
+OuterClass = class
+  my_class = MyClass.new('test')
+end
+
+outer = OuterClass.new()
+
+print(outer.my_class.word)
+print(outer['my_class']['say']())
+
+
+
+print(outer.my_class + 1)

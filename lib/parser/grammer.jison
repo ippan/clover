@@ -80,18 +80,15 @@ assign_statment:
 ;
 
 factor:
-  identifier
-| BASE '.' identifier { $$ = new Node.BaseGetMember($3) }
-| factor '.' identifier { $$ = new Node.GetMember($1, $3) }
+  IDENTIFIER { $$ = new Node.GetMember(null, new Node.String($1, true)) }
+| BASE '.' IDENTIFIER { $$ = new Node.BaseGetMember(new Node.String($3, true)) }
+| factor '.' IDENTIFIER { $$ = new Node.GetMember($1, new Node.String($3, true)) }
+| factor '[' expression ']' { $$ = new Node.GetMember($1, $3) }
 ;
 
 boolean:
   TRUE { $$ = new Node.Boolean(true) }
 | FALSE { $$ = new Node.Boolean(false) }
-;
-
-identifier:
-  IDENTIFIER { $$ = new Node.Identifier($1) }
 ;
 
 function:
@@ -105,8 +102,8 @@ class:
 
 parameter_names:
 { $$ = [] }
-| identifier { $$ = [ $1 ] }
-| parameter_names ',' identifier { $$ = $1.concat($3) }
+| IDENTIFIER { $$ = [ $1 ] }
+| parameter_names ',' IDENTIFIER { $$ = $1.concat($3) }
 ;
 
 function_call:

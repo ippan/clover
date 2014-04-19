@@ -48,6 +48,9 @@ apply = (Runtime)->
     constructor: (@class_context, @global_context)->
       super()
 
+    has_local: (name)->
+      super(name) || @class_context.has_local(name)
+
     try_get: (name)->
       super(name) || @class_context.try_get(name)
 

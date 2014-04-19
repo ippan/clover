@@ -16,9 +16,6 @@ apply = (Node)->
     @second.dump()
     process.stdout.write ')'
 
-  Node.Identifier::dump = ->
-    process.stdout.write @name
-
   Node.Null::dump = ->
     process.stdout.write 'null'
 
@@ -40,7 +37,7 @@ apply = (Node)->
     process.stdout.write "function ("
 
     for parameter, i in @parameters
-      parameter.dump()
+      process.stdout.write parameter
       process.stdout.write(', ') if i < @parameters.length - 1
 
     process.stdout.write ")\n"
@@ -59,8 +56,10 @@ apply = (Node)->
     process.stdout.write "end"
 
   Node.GetMember::dump = ->
-    @instance.dump()
-    process.stdout.write '.'
+    if @instance?
+      @instance.dump()
+      process.stdout.write '.'
+
     @member.dump()
 
   Node.BaseGetMember::dump = ->

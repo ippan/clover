@@ -5,10 +5,13 @@ fs = require 'fs'
 
 # TODO : implement a cli
 
-filename = process.argv[2]
-code = fs.readFileSync filename, 'utf8'
+if process.argv.length > 2
+  filename = process.argv[2]
+  code = fs.readFileSync filename, 'utf8'
 
-node = clover.parser.parse(code)
-#node.dump()
+  node = clover.parser.parse(code)
+  # node.dump()
 
-node.execute()
+  node.execute()
+else
+  console.log "usage:\nclover SCRIPT_FILENAME"

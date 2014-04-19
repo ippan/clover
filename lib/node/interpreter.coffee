@@ -14,16 +14,20 @@ apply = (Node, Runtime)->
   Node.String::execute = (context)->
 
     # TODO : translate string
+    string = @translated && @string || @string.substring(1, @string.length - 1)
 
-    new Runtime.String(@string.substring(1, @string.length - 1))
+    new Runtime.String(string)
 
   
   Node.BinaryOperation::execute = (context)->
-    @first.execute(context)[@op_method](@second.execute(context))
+    first = @first.execute(context)
+    second = @second.execute(context)
 
-
-  Node.Identifier::execute = (context)->
-    context.get @name
+    if first.has_user_op(@op_method)
+      op_function = first.get(@op_method)
+      op_function.call([ second ])
+    else
+      first[@op_method](second)
 
   Node.Null::execute = (context)->
     new Runtime.Null() 
@@ -36,7 +40,7 @@ apply = (Node, Runtime)->
     parameters = []
     # TODO : add defulat parameter support
     for parameter in @parameters
-      parameters.push [ parameter.name, new Runtime.Null() ]
+      parameters.push [ parameter, new Runtime.Null() ]
 
     new Runtime.Function(context, @expressions, parameters)
 
@@ -73,16 +77,16 @@ apply = (Node, Runtime)->
     
 
   Node.GetMember::execute = (context)->
-
-    instance = @instance.execute(context)
-    instance.get @member.name
+    instance = (@instance? && @instance.execute(context)) || context
+    instance.get @member.execute(context).runtime_value
 
   Node.BaseGetMember::execute = (context)->
-    context.scope_context.base.get(@member.name).bind context.environment, @member.name
+    name = @member.execute(context).runtime_value
+    context.scope_context.base.get(name).bind context.environment, name
 
   Node.IfElse::execute = (context)->
     # TODO : use block context
-    if @condition.execute(context).to_bool().boolean
+    if @condition.execute(context).to_bool().runtime_value
       for expression in @true_part
         expression.execute(context) 
     else if @false_part?
