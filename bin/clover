@@ -9,6 +9,6 @@ filename = process.argv[2]
 code = fs.readFileSync filename, 'utf8'
 
 node = clover.parser.parse(code)
-# node.dump()
+#node.dump()
 
 node.execute()

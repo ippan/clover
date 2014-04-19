@@ -49,8 +49,14 @@ apply = (Runtime)->
     op_divide: (target)->
       new Runtime.Number(@number / target.number)  
 
+    op_greater: (target)->      
+      new Runtime.Boolean(@number > target.number)
+
+    op_less: (target)->
+      new Runtime.Boolean(@number < target.number)
+
     to_string: ->
-      new Runtime.String(@number.toString())
+      new Runtime.String(@number.toString())  
 
 
   class Runtime.String extends Runtime.Object

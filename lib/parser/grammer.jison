@@ -13,6 +13,7 @@
 %right '='
 %right '+=' '-='
 %right '*=' '/='
+%left '>' '<' 
 %left '+' '-'
 %left '*' '/'
 %left '.'
@@ -52,7 +53,9 @@ literal:
 ;
 
 operator:
-  expression '+' expression { $$ = new Node.Plus($1, $3) }
+  expression '>' expression { $$ = new Node.Greater($1, $3) }
+| expression '<' expression { $$ = new Node.Less($1, $3) }
+| expression '+' expression { $$ = new Node.Plus($1, $3) }
 | expression '-' expression { $$ = new Node.Minus($1, $3) }
 | expression '*' expression { $$ = new Node.Multiply($1, $3) }
 | expression '/' expression { $$ = new Node.Divide($1, $3) }

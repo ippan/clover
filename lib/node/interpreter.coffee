@@ -84,9 +84,10 @@ apply = (Node, Runtime)->
     # TODO : use block context
     if @condition.execute(context).to_bool().boolean
       for expression in @true_part
-        expression.execute context
-    else
+        expression.execute(context) 
+    else if @false_part?
       for expression in @false_part
-        expression.execute context
+        expression.execute(context) 
+        
 
 exports.apply = apply

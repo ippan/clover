@@ -28,6 +28,14 @@ class Node.Divide extends Node.BinaryOperation
   op_method: 'op_divide'
   operator: '/'
 
+class Node.Greater extends Node.BinaryOperation
+  op_method: 'op_greater'
+  operator: '>'
+
+class Node.Less extends Node.BinaryOperation
+  op_method: 'op_less'
+  operator: '<'
+
 class Node.Identifier
   constructor: (@name)->
 
@@ -61,7 +69,7 @@ class Node.GetMember
   constructor: (@instance, @member)->
 
 class Node.BaseGetMember
-  constructor: (@member)->
+  constructor: (@member)->    
 
 class Node.IfElse
   constructor: (@condition, @true_part, @false_part)->
