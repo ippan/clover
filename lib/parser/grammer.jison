@@ -15,9 +15,9 @@
 %right '*=' '/='
 %left OR
 %left AND
-%left '>' '<' 
+%left '>' '<' '=='
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left '.'
 %nonassoc UMINUS
 
@@ -34,18 +34,17 @@ expressions:
 | expressions NEW_LINE { $$ = $1 }
 ;
 
-expression:
-  literal
-| new_class
+expression:  
+  new_class
 | function_call
 | operator
 | factor
 | assign_statment
 | if_statment
+| while_statment
 | function
 | class
 | hash
-| '(' expression ')' { $$ = $2 }
 ;
 
 literal:
@@ -60,10 +59,12 @@ operator:
 | expression OR expression { $$ = new Node.Or($1, $3) }
 | expression '>' expression { $$ = new Node.Greater($1, $3) }
 | expression '<' expression { $$ = new Node.Less($1, $3) }
+| expression '==' expression { $$ = new Node.Equal($1, $3) }
 | expression '+' expression { $$ = new Node.Plus($1, $3) }
 | expression '-' expression { $$ = new Node.Minus($1, $3) }
 | expression '*' expression { $$ = new Node.Multiply($1, $3) }
 | expression '/' expression { $$ = new Node.Divide($1, $3) }
+| expression '%' expression { $$ = new Node.Mod($1, $3) }
 | '-' expression %prec UMINUS { $$ = new Node.Uminus($2) }
 ;
 
@@ -82,6 +83,10 @@ key_values:
 
 key_value:
   IDENTIFIER ':' expression { $$ = new Node.KeyValue($1, $3) }
+;
+
+while_statment:
+  WHILE expression NEW_LINE expressions END { $$ = new Node.While($2, $4) }
 ;
 
 if_statment:
@@ -106,6 +111,8 @@ factor:
 | BASE '.' IDENTIFIER { $$ = new Node.BaseGetMember(new Node.String($3, true)) }
 | factor '.' IDENTIFIER { $$ = new Node.GetMember($1, new Node.String($3, true)) }
 | factor '[' expression ']' { $$ = new Node.GetMember($1, $3) }
+| '(' expression ')' { $$ = $2 }
+| literal
 ;
 
 boolean:

@@ -105,12 +105,18 @@ apply = (Node, Runtime)->
 
   Node.IfElse::execute = (context)->
     # TODO : use block context
-    if @condition.execute(context).to_bool().runtime_value
+    if @condition.execute(context).get('bool').call([]).runtime_value
       for expression in @true_part
         expression.execute(context) 
     else if @false_part?
       for expression in @false_part
         expression.execute(context) 
         
+
+  Node.While::execute = (context)->
+    # TODO : use block context
+    while @condition.execute(context).get('bool').call([]).runtime_value
+      for expression in @expressions
+        expression.execute(context)
 
 exports.apply = apply

@@ -6,6 +6,11 @@ apply = (Runtime)->
     op_assign: (target)->
       if @identifier? and @environment?
         @environment.set(@identifier, target)
+      else
+        throw 'can not assign'
+
+    op_equal: (target)->
+      new Runtime.Boolean(this == target)
 
     bind: (@environment, @identifier)->
       this
@@ -14,7 +19,10 @@ apply = (Runtime)->
       new Runtime.String('object')
 
     get: (name)->
-      this[name]
+      value = this[name]
+      if typeof(value) == 'function'
+        value = value.bind(this)()
+      ((value instanceof Runtime.Object) and value or new Runtime.Null()).bind(this, name)
 
     to_bool: ->
       new Runtime.Boolean(true)
@@ -22,7 +30,13 @@ apply = (Runtime)->
     has_user_op: (name)->
       false
 
+    string: ->
+      new Runtime.NativeFunction (parameters)=>
+        @to_string()
 
+    bool: ->
+      new Runtime.NativeFunction (parameters)=>
+        @to_bool()
 
   class Runtime.Null extends Runtime.Object
     to_bool: ->
@@ -30,6 +44,9 @@ apply = (Runtime)->
 
     to_string: ->
       new Runtime.String('null')
+
+    op_equal: (target)->
+      new Runtime.Boolean(target instanceof Runtime.Null)
 
   class Runtime.Boolean extends Runtime.Object
     constructor: (@runtime_value = true)->
@@ -39,6 +56,9 @@ apply = (Runtime)->
 
     to_bool: ->
       this
+
+    op_equal: (target)->
+      new Runtime.Boolean(this.runtime_value == target.runtime_value)
 
   class Runtime.Number extends Runtime.Object
     constructor: (@runtime_value = 0)->
@@ -53,13 +73,19 @@ apply = (Runtime)->
       new Runtime.Number(@runtime_value * target.runtime_value)
 
     op_divide: (target)->
-      new Runtime.Number(@runtime_value / target.runtime_value)  
+      new Runtime.Number(@runtime_value / target.runtime_value) 
+
+    op_mod: (target)->
+      new Runtime.Number(@runtime_value % target.runtime_value) 
 
     op_greater: (target)->      
       new Runtime.Boolean(@runtime_value > target.runtime_value)
 
     op_less: (target)->
       new Runtime.Boolean(@runtime_value < target.runtime_value)
+
+    op_equal: (target)->
+      new Runtime.Boolean(this.runtime_value == target.runtime_value)
 
     op_uminus: ->
       new Runtime.Number(-@runtime_value)
@@ -146,10 +172,11 @@ apply = (Runtime)->
       @context = new Runtime.InstanceContext(@class.context, context.global_context || context)
 
     get: (name)->
-      @context.get name
+      (@context.try_get(name) || super(name)).bind(@context, name)
 
     has_user_op: (name)->
       @context.has_local(name)
+
 
 
 exports.apply = apply

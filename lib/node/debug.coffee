@@ -109,6 +109,13 @@ apply = (Node)->
     process.stdout.write "else\n"
     dump_expressions @false_part
 
+  Node.While::dump = ->
+    process.stdout.write 'while '
+    @condition.dump()
+    process.stdout.write "\n"
+    dump_expressions @expressions
+    process.stdout.write 'end'
+
   Node.NewClass::dump = ->
     @class.dump()
     process.stdout.write '.new('

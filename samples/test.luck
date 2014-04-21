@@ -33,32 +33,17 @@ MyClass = class extends MyBaseClass
   end
 end
 
-
-OuterClass = class
-  my_class = MyClass.new('test')
+i = 0
+while i < 10
+  if i % 2 == 0
+    print(i)
+  end
+  i += 1
 end
 
-outer = OuterClass.new()
+a = MyClass.new('test')
+b = a
 
-print(outer.my_class.word)
-print(outer['my_class']['say']())
-
-print(outer.my_class + 1)
-
-print(1 and 2)
-print(1 or 2)
-print(false and 2)
-print(false or 2)
-
-a = -1
-
-a = (a > 0) and 10 or 20
-
-print(a)
-
-print(-outer.my_class)
-
-hash = { g: 7, m: 6 }
-
-print(hash.g)
-print(hash['m'])
+if a == b
+  print('ok')
+end

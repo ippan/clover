@@ -28,6 +28,10 @@ class Node.Divide extends Node.BinaryOperation
   op_method: 'op_divide'
   operator: '/'
 
+class Node.Mod extends Node.BinaryOperation
+  op_method: 'op_mod'
+  operator: '%'
+
 class Node.Greater extends Node.BinaryOperation
   op_method: 'op_greater'
   operator: '>'
@@ -35,6 +39,10 @@ class Node.Greater extends Node.BinaryOperation
 class Node.Less extends Node.BinaryOperation
   op_method: 'op_less'
   operator: '<'
+
+class Node.Equal extends Node.BinaryOperation
+  op_method: 'op_equal'
+  operator: '=='
 
 class Node.Hash
   constructor: (@key_values)->
@@ -79,6 +87,9 @@ class Node.GetMember
 
 class Node.BaseGetMember
   constructor: (@member)->    
+
+class Node.While
+  constructor: (@condition, @expressions)->
 
 class Node.IfElse
   constructor: (@condition, @true_part, @false_part)->
