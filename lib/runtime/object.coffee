@@ -109,10 +109,10 @@ apply = (Runtime)->
 
 
   class Runtime.NativeFunction extends Runtime.Callable
-    constructor: (@function)->
+    constructor: (@runtime_value)->
 
     call: (parameters)->
-      @function parameters if @function
+      @runtime_value parameters if @runtime_value
 
   # TODO : for test only, remove later
   class Runtime.PrintFunction extends Runtime.NativeFunction
@@ -142,6 +142,14 @@ apply = (Runtime)->
         result = expression.execute function_context
 
       result
+
+  # TODO : create a native object binding object
+  class Runtime.NativeObject extends Runtime.Object
+    constructor: (@runtime_value)->
+
+    get: (name)->
+      value = @runtime_value[name]
+
 
   class Runtime.Hash extends Runtime.Object
     constructor: (context, key_values)->
