@@ -1,8 +1,10 @@
 # Clover
 
-a toy object-oriented language created in CoffeeScript~
+a toy object-oriented language created in Go~
 
 still in development~
+
+#### golang version is under development, only lexer have implemented. If you want to find the CoffeeScript version, go to https://github.com/ippan/clover/tree/coffee
 
 ### features
 * classes & inheritance
@@ -35,4 +37,4 @@ still in development~
 
 ## Usage
 
-    ./bin/clover ./samples/test.luck
+    clover ./samples/test.luck
