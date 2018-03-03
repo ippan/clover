@@ -7,6 +7,7 @@ import (
 type Lexer struct {
 	input            string
 	position         int
+	tokenLine        int
 	line             int
 	currentCharacter byte
 }
@@ -24,11 +25,12 @@ var keywordTokens = map[string]token.TokenType{
 	"null":     token.NULL,
 	"class":    token.CLASS,
 	"extends":  token.EXTENDS,
+	"return":   token.RETURN,
 	"while":    token.WHILE,
 }
 
 var symbolTokens = map[string]token.TokenType{
-	"=": token.EQUAL,
+	"=": token.ASSIGN,
 	"+": token.PLUS,
 	"-": token.MINUS,
 	"*": token.STAR,
@@ -39,6 +41,7 @@ var symbolTokens = map[string]token.TokenType{
 	",": token.COMMA,
 	"&": token.BIT_AND,
 	"|": token.BIT_OR,
+	".": token.DOT,
 
 	"==": token.EQUAL,
 	"!=": token.NOT_EQUAL,
@@ -183,8 +186,10 @@ func isSymbol(character byte) bool {
 
 func (lexer *Lexer) Lex() token.Token {
 	if lexer.currentCharacter == 0 {
-		return token.New(token.EOF, "")
+		return token.New(token.EOF, "EOF")
 	}
+
+	lexer.tokenLine = lexer.line
 
 	if isSpace(lexer.currentCharacter) {
 		lexer.nextCharacter()
@@ -213,4 +218,8 @@ func (lexer *Lexer) Lex() token.Token {
 	}
 
 	return token.New(token.INVALID, string(lexer.currentCharacter))
+}
+
+func (lexer *Lexer) TokenLine() int {
+	return lexer.tokenLine
 }

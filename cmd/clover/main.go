@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/ippan/clover/lexer"
-	"github.com/ippan/clover/token"
+	"github.com/ippan/clover/parser"
 	"io"
 	"os"
 )
@@ -25,11 +25,19 @@ func startRepl(reader io.Reader) {
 			return
 		}
 
-		luck_lexer := lexer.New(line)
+		l := lexer.New(line)
+		p := parser.New(l)
 
-		for luck_token := luck_lexer.Lex(); luck_token.Type != token.EOF; luck_token = luck_lexer.Lex() {
-			fmt.Printf("%+v\n", luck_token)
+		program := p.Parse()
+
+		if len(p.Errors()) > 0 {
+			for _, error := range p.Errors() {
+				fmt.Printf("%s\n", error)
+			}
+			continue
 		}
+
+		fmt.Print(program.String())
 	}
 
 }
