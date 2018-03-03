@@ -56,10 +56,10 @@ const (
 )
 
 type Token struct {
-	Type TokenType
+	Type    TokenType
 	Literal string
 }
 
 func New(token_type TokenType, literal string) Token {
-	return Token{ Type: token_type, Literal: literal }
+	return Token{Type: token_type, Literal: literal}
 }

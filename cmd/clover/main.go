@@ -1,17 +1,17 @@
 package main
 
 import (
-	"io"
 	"bufio"
 	"fmt"
-	"os"
 	"github.com/ippan/clover/lexer"
 	"github.com/ippan/clover/token"
+	"io"
+	"os"
 )
 
 const prompt = "clover>"
 
-func start_repl(reader io.Reader) {
+func startRepl(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
 
 	for {
@@ -35,5 +35,5 @@ func start_repl(reader io.Reader) {
 }
 
 func main() {
-	start_repl(os.Stdin)
+	startRepl(os.Stdin)
 }

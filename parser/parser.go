@@ -6,7 +6,7 @@ import (
 )
 
 type Parser struct {
-	l *lexer.Lexer
-	current_token token.Token
-	peek_token token.Token
+	l            *lexer.Lexer
+	currentToken token.Token
+	peekToken    token.Token
 }

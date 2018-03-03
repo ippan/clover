@@ -5,29 +5,29 @@ import (
 )
 
 type Lexer struct {
-	input string
-	position int
-	line int
-	current_character byte
+	input            string
+	position         int
+	line             int
+	currentCharacter byte
 }
 
-var keyword_tokens = map[string]token.TokenType {
+var keywordTokens = map[string]token.TokenType{
 	"function": token.FUNCTION,
-	"end": token.END,
-	"if": token.IF,
-	"else": token.ELSE,
-	"and": token.AND,
-	"or": token.OR,
-	"not": token.NOT,
-	"true": token.TRUE,
-	"false": token.FALSE,
-	"null": token.NULL,
-	"class": token.CLASS,
-	"extends": token.EXTENDS,
-	"while": token.WHILE,
+	"end":      token.END,
+	"if":       token.IF,
+	"else":     token.ELSE,
+	"and":      token.AND,
+	"or":       token.OR,
+	"not":      token.NOT,
+	"true":     token.TRUE,
+	"false":    token.FALSE,
+	"null":     token.NULL,
+	"class":    token.CLASS,
+	"extends":  token.EXTENDS,
+	"while":    token.WHILE,
 }
 
-var symbol_tokens = map[string]token.TokenType {
+var symbolTokens = map[string]token.TokenType{
 	"=": token.EQUAL,
 	"+": token.PLUS,
 	"-": token.MINUS,
@@ -44,8 +44,8 @@ var symbol_tokens = map[string]token.TokenType {
 	"!=": token.NOT_EQUAL,
 	"&&": token.AND,
 	"||": token.OR,
-	">": token.GREATER,
-	"<": token.LESS,
+	">":  token.GREATER,
+	"<":  token.LESS,
 	">=": token.GREATER_EQUAL,
 	"<=": token.LESS_EQUAL,
 	"+=": token.PLUS_ASSIGN,
@@ -55,78 +55,78 @@ var symbol_tokens = map[string]token.TokenType {
 }
 
 func New(input string) *Lexer {
-	lexer := &Lexer{ input: input, line: 1 }
-	lexer.next_character()
+	lexer := &Lexer{input: input, line: 1}
+	lexer.nextCharacter()
 	return lexer
 }
 
-func (lexer *Lexer) next_character() {
+func (lexer *Lexer) nextCharacter() {
 	if lexer.position >= len(lexer.input) {
-		lexer.current_character = 0
+		lexer.currentCharacter = 0
 	} else {
-		lexer.current_character = lexer.input[lexer.position]
+		lexer.currentCharacter = lexer.input[lexer.position]
 
-		if lexer.current_character == '\n' {
+		if lexer.currentCharacter == '\n' {
 			lexer.line += 1
 		}
 	}
 	lexer.position += 1
 }
 
-func is_space(character byte) bool {
-	return character == ' ' || character == '\t' || character == '\r' || character == '\v' || character == '\f' || character == '\n';
+func isSpace(character byte) bool {
+	return character == ' ' || character == '\t' || character == '\r' || character == '\v' || character == '\f' || character == '\n'
 }
 
-func is_string(character byte) bool {
+func isString(character byte) bool {
 	return character == '"' || character == '\''
 }
 
-func is_alpha(character byte) bool {
+func isAlpha(character byte) bool {
 	return (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z')
 }
 
-func is_identifier(character byte) bool {
-	return character == '_' || is_alpha(character)
+func isIdentifier(character byte) bool {
+	return character == '_' || isAlpha(character)
 }
 
-func is_number(character byte) bool {
+func isNumber(character byte) bool {
 	return character >= '0' && character <= '9'
 }
 
-func (lexer *Lexer) skip_comment() {
-	for !(lexer.current_character == 0 || lexer.current_character == '\n') {
-		lexer.next_character()
+func (lexer *Lexer) skipComment() {
+	for !(lexer.currentCharacter == 0 || lexer.currentCharacter == '\n') {
+		lexer.nextCharacter()
 	}
-	lexer.next_character()
+	lexer.nextCharacter()
 }
 
-func (lexer *Lexer) lex_string() token.Token {
+func (lexer *Lexer) lexString() token.Token {
 
-	// TODO : parase string with special character like \n if it is a "" string"
+	// TODO : parse string with special character like \n if it is a "" string"
 
-	boundary_character := lexer.current_character
+	boundaryCharacter := lexer.currentCharacter
 	position := lexer.position
 	for {
-		lexer.next_character()
-		if lexer.current_character == boundary_character || lexer.current_character == 0 {
+		lexer.nextCharacter()
+		if lexer.currentCharacter == boundaryCharacter || lexer.currentCharacter == 0 {
 			break
 		}
 	}
-	end_position := lexer.position - 1
-	lexer.next_character()
+	endPosition := lexer.position - 1
+	lexer.nextCharacter()
 
-	return token.New(token.STRING, lexer.input[position:end_position])
+	return token.New(token.STRING, lexer.input[position:endPosition])
 }
 
-func (lexer *Lexer) lex_identifier() token.Token {
+func (lexer *Lexer) lexIdentifier() token.Token {
 	position := lexer.position - 1
 	for {
-		lexer.next_character()
-		if !(is_identifier(lexer.current_character) || is_number(lexer.current_character)) {
-			identifier := lexer.input[position:lexer.position - 1]
+		lexer.nextCharacter()
+		if !(isIdentifier(lexer.currentCharacter) || isNumber(lexer.currentCharacter)) {
+			identifier := lexer.input[position : lexer.position-1]
 
-			if keyword_type, ok := keyword_tokens[identifier]; ok {
-				return token.New(keyword_type, identifier)
+			if keywordType, ok := keywordTokens[identifier]; ok {
+				return token.New(keywordType, identifier)
 			}
 
 			return token.New(token.IDENTIFIER, identifier)
@@ -134,83 +134,83 @@ func (lexer *Lexer) lex_identifier() token.Token {
 	}
 }
 
-func (lexer *Lexer) lex_number() token.Token {
-	var token_type token.TokenType = token.INTEGER
+func (lexer *Lexer) lexNumber() token.Token {
+	var tokenType token.TokenType = token.INTEGER
 	position := lexer.position - 1
 
 	for {
-		lexer.next_character()
-		if is_number(lexer.current_character) || lexer.current_character == '.' {
-			if lexer.current_character == '.' {
-				if token_type == token.FLOAT {
-					token_type = token.INVALID
-				} else if token_type == token.INTEGER {
-					token_type = token.FLOAT
+		lexer.nextCharacter()
+		if isNumber(lexer.currentCharacter) || lexer.currentCharacter == '.' {
+			if lexer.currentCharacter == '.' {
+				if tokenType == token.FLOAT {
+					tokenType = token.INVALID
+				} else if tokenType == token.INTEGER {
+					tokenType = token.FLOAT
 				}
 			}
 		} else {
-			return token.New(token_type, lexer.input[position:lexer.position - 1])
+			return token.New(tokenType, lexer.input[position:lexer.position-1])
 		}
 	}
 }
 
-func (lexer *Lexer) lex_symbol() token.Token {
+func (lexer *Lexer) lexSymbol() token.Token {
 
-	symbol := string(lexer.current_character)
+	symbol := string(lexer.currentCharacter)
 
-	lexer.next_character()
+	lexer.nextCharacter()
 
-	if is_symbol(lexer.current_character) {
-		multi_characters_symbol := lexer.input[lexer.position - 2:lexer.position]
+	if isSymbol(lexer.currentCharacter) {
+		multiCharactersSymbol := lexer.input[lexer.position-2 : lexer.position]
 
-		if token_type, ok := symbol_tokens[multi_characters_symbol]; ok {
-			lexer.next_character()
-			return token.New(token_type, multi_characters_symbol)
+		if tokenType, ok := symbolTokens[multiCharactersSymbol]; ok {
+			lexer.nextCharacter()
+			return token.New(tokenType, multiCharactersSymbol)
 		}
 	}
 
-	if token_type, ok := symbol_tokens[symbol]; ok {
-		return token.New(token_type, symbol)
+	if tokenType, ok := symbolTokens[symbol]; ok {
+		return token.New(tokenType, symbol)
 	}
 
 	return token.New(token.INVALID, symbol)
 }
 
-func is_symbol(character byte) bool {
-	_, ok := symbol_tokens[string(character)]
+func isSymbol(character byte) bool {
+	_, ok := symbolTokens[string(character)]
 	return ok
 }
 
 func (lexer *Lexer) Lex() token.Token {
-	if lexer.current_character == 0 {
+	if lexer.currentCharacter == 0 {
 		return token.New(token.EOF, "")
 	}
 
-	if is_space(lexer.current_character) {
-		lexer.next_character()
+	if isSpace(lexer.currentCharacter) {
+		lexer.nextCharacter()
 		return lexer.Lex()
 	}
 
-	if lexer.current_character == '#' {
-		lexer.skip_comment()
+	if lexer.currentCharacter == '#' {
+		lexer.skipComment()
 		return lexer.Lex()
 	}
 
-	if is_string(lexer.current_character) {
-		return lexer.lex_string()
+	if isString(lexer.currentCharacter) {
+		return lexer.lexString()
 	}
 
-	if is_identifier(lexer.current_character) {
-		return lexer.lex_identifier()
+	if isIdentifier(lexer.currentCharacter) {
+		return lexer.lexIdentifier()
 	}
 
-	if is_number(lexer.current_character) {
-		return lexer.lex_number()
+	if isNumber(lexer.currentCharacter) {
+		return lexer.lexNumber()
 	}
 
-	if is_symbol(lexer.current_character) {
-		return lexer.lex_symbol()
+	if isSymbol(lexer.currentCharacter) {
+		return lexer.lexSymbol()
 	}
 
-	return token.New(token.INVALID, string(lexer.current_character))
+	return token.New(token.INVALID, string(lexer.currentCharacter))
 }
