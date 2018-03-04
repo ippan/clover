@@ -6,6 +6,7 @@ const (
 	_ = iota
 	INVALID
 	EOF
+	EMPTY
 
 	IDENTIFIER
 	STRING

@@ -23,26 +23,27 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
-	token.ASSIGN:        ASSIGN,
-	token.PLUS_ASSIGN:   ASSIGN,
-	token.MINUS_ASSIGN:  ASSIGN,
-	token.STAR_ASSIGN:   ASSIGN,
-	token.SLASH_ASSIGN:  ASSIGN,
-	token.AND:           BOOLEAN,
-	token.OR:            BOOLEAN,
-	token.EQUAL:         EQUALS,
-	token.NOT_EQUAL:     EQUALS,
-	token.LESS:          LESSGREATER,
-	token.GREATER:       LESSGREATER,
-	token.LESS_EQUAL:    LESSGREATER,
-	token.GREATER_EQUAL: LESSGREATER,
-	token.PLUS:          SUM,
-	token.MINUS:         SUM,
-	token.STAR:          PRODUCT,
-	token.SLASH:         PRODUCT,
-	token.BIT_AND:       PRODUCT,
-	token.BIT_OR:        PRODUCT,
-	token.DOT:           DOT,
+	token.ASSIGN:           ASSIGN,
+	token.PLUS_ASSIGN:      ASSIGN,
+	token.MINUS_ASSIGN:     ASSIGN,
+	token.STAR_ASSIGN:      ASSIGN,
+	token.SLASH_ASSIGN:     ASSIGN,
+	token.AND:              BOOLEAN,
+	token.OR:               BOOLEAN,
+	token.EQUAL:            EQUALS,
+	token.NOT_EQUAL:        EQUALS,
+	token.LESS:             LESSGREATER,
+	token.GREATER:          LESSGREATER,
+	token.LESS_EQUAL:       LESSGREATER,
+	token.GREATER_EQUAL:    LESSGREATER,
+	token.PLUS:             SUM,
+	token.MINUS:            SUM,
+	token.STAR:             PRODUCT,
+	token.SLASH:            PRODUCT,
+	token.BIT_AND:          PRODUCT,
+	token.BIT_OR:           PRODUCT,
+	token.DOT:              DOT,
+	token.LEFT_PARENTHESES: CALL,
 }
 
 type prefixFunction func() ast.Expression
@@ -78,6 +79,9 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefixFunction(token.NOT, p.parsePrefixExpression)
 	p.registerPrefixFunction(token.LEFT_PARENTHESES, p.parseGroupExpression)
 	p.registerPrefixFunction(token.IF, p.parseIfExpression)
+	p.registerPrefixFunction(token.WHILE, p.parseWhileExpression)
+	p.registerPrefixFunction(token.FUNCTION, p.parseFunctionExpression)
+	p.registerPrefixFunction(token.CLASS, p.parseClassExpression)
 
 	p.infixFunctions = make(map[token.TokenType]infixFunction)
 
@@ -101,6 +105,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfixFunction(token.BIT_AND, p.parseInfixExpression)
 	p.registerInfixFunction(token.BIT_OR, p.parseInfixExpression)
 	p.registerInfixFunction(token.DOT, p.parseInfixExpression)
+	p.registerInfixFunction(token.LEFT_PARENTHESES, p.parseCallExpression)
 
 	// run twice to set current and peek token
 	p.nextToken()
@@ -174,12 +179,12 @@ func (p *Parser) registerInfixFunction(tt token.TokenType, function infixFunctio
 	p.infixFunctions[tt] = function
 }
 
-func (p *Parser) parseProgram(terimators []token.TokenType) *ast.Program {
+func (p *Parser) parseProgram(terminators []token.TokenType) *ast.Program {
 	program := &ast.Program{Statements: []ast.Statement{}}
 
 	for {
-		for _, terimator := range terimators {
-			if p.currentTokenIs(terimator) {
+		for _, terminator := range terminators {
+			if p.currentTokenIs(terminator) {
 				return program
 			}
 		}
@@ -190,8 +195,6 @@ func (p *Parser) parseProgram(terimators []token.TokenType) *ast.Program {
 		}
 		p.nextToken()
 	}
-
-	return program
 }
 
 func (p *Parser) Parse() *ast.Program {
@@ -345,11 +348,11 @@ func (p *Parser) parseIfExpression() ast.Expression {
 
 	p.nextToken()
 
-	ie.TruePart = p.parseProgram([]token.TokenType{token.EOF, token.ELSE, token.END})
+	ie.TruePart = p.parseProgram([]token.TokenType{token.ELSE, token.END})
 
 	if p.currentTokenIs(token.ELSE) {
 		p.nextToken()
-		ie.FalsePart = p.parseProgram([]token.TokenType{token.EOF, token.END})
+		ie.FalsePart = p.parseProgram([]token.TokenType{token.END})
 	}
 
 	if !p.expectToken(p.currentToken, token.END) {
@@ -357,4 +360,131 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	}
 
 	return ie
+}
+
+func (p *Parser) parseWhileExpression() ast.Expression {
+	we := &ast.WhileExpression{Token: p.currentToken}
+
+	if !p.expectPeek(token.LEFT_PARENTHESES) {
+		return nil
+	}
+
+	p.nextToken()
+	we.Condition = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.RIGHT_PARENTHESES) {
+		return nil
+	}
+
+	p.nextToken()
+
+	we.Body = p.parseProgram([]token.TokenType{token.END})
+
+	if !p.expectToken(p.currentToken, token.END) {
+		return nil
+	}
+
+	return we
+}
+
+func (p *Parser) parseParameters(separator token.TokenType, assignTokenType token.TokenType, terminator token.TokenType) []*ast.Parameter {
+	var parameters []*ast.Parameter
+
+	for !p.currentTokenIs(terminator) {
+
+		if !p.expectToken(p.currentToken, token.IDENTIFIER) {
+			return nil
+		}
+
+		parameter := &ast.Parameter{Name: p.parseIdentifier().(*ast.Identifier)}
+
+		if p.peekTokenIs(assignTokenType) {
+			p.nextToken()
+			p.nextToken()
+			parameter.Value = p.parseExpression(LOWEST)
+		}
+
+		parameters = append(parameters, parameter)
+
+		if separator != token.EMPTY && !p.peekTokenIs(terminator) {
+			if !p.expectPeek(separator) {
+				return nil
+			}
+		}
+
+		p.nextToken()
+	}
+
+	return parameters
+}
+
+func (p *Parser) parseFunctionExpression() ast.Expression {
+	fe := &ast.FunctionExpression{Token: p.currentToken}
+
+	if !p.expectPeek(token.LEFT_PARENTHESES) {
+		return nil
+	}
+
+	p.nextToken()
+
+	fe.Parameters = p.parseParameters(token.COMMA, token.ASSIGN, token.RIGHT_PARENTHESES)
+
+	p.nextToken()
+
+	fe.Body = p.parseProgram([]token.TokenType{token.END})
+
+	if !p.expectToken(p.currentToken, token.END) {
+		return nil
+	}
+
+	return fe
+}
+
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+	ce := &ast.CallExpression{Function: function}
+
+	if !p.expectToken(p.currentToken, token.LEFT_PARENTHESES) {
+		return nil
+	}
+
+	p.nextToken()
+
+	var arguments []ast.Expression
+
+	for !p.currentTokenIs(token.RIGHT_PARENTHESES) {
+		expression := p.parseExpression(LOWEST)
+		arguments = append(arguments, expression)
+
+		if !p.peekTokenIs(token.RIGHT_PARENTHESES) {
+			if !p.expectPeek(token.COMMA) {
+				return nil
+			}
+		}
+
+		p.nextToken()
+	}
+
+	ce.Arguments = arguments
+
+	return ce
+}
+
+func (p *Parser) parseClassExpression() ast.Expression {
+	ce := &ast.ClassExpression{Token: p.currentToken}
+
+	if p.peekTokenIs(token.EXTENDS) {
+		p.nextToken()
+		p.nextToken()
+		ce.Parent = p.parseExpression(LOWEST)
+	}
+
+	p.nextToken()
+
+	ce.Body = p.parseParameters(token.EMPTY, token.ASSIGN, token.END)
+
+	if !p.expectToken(p.currentToken, token.END) {
+		return nil
+	}
+
+	return ce
 }

@@ -149,13 +149,126 @@ type IfExpression struct {
 func (ie *IfExpression) String() string {
 	var out bytes.Buffer
 
-	out.WriteString("if ")
-	out.WriteString(ie.Condition.String() + "\n")
+	out.WriteString(ie.Token.Literal)
+	out.WriteString("(")
+	out.WriteString(ie.Condition.String())
+	out.WriteString(")\n")
 	out.WriteString(ie.TruePart.String())
 
 	if ie.FalsePart != nil {
 		out.WriteString("else\n")
 		out.WriteString(ie.FalsePart.String())
+	}
+
+	out.WriteString("end")
+
+	return out.String()
+}
+
+type WhileExpression struct {
+	Token     token.Token
+	Condition Expression
+	Body      *Program
+}
+
+func (we *WhileExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(we.Token.Literal)
+	out.WriteString("(")
+	out.WriteString(we.Condition.String())
+	out.WriteString(")\n")
+	out.WriteString(we.Body.String())
+	out.WriteString("end")
+
+	return out.String()
+}
+
+type Parameter struct {
+	Name  *Identifier
+	Value Expression
+}
+
+type FunctionExpression struct {
+	Token      token.Token
+	Parameters []*Parameter
+	Body       *Program
+}
+
+func (fe *FunctionExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(fe.Token.Literal)
+	out.WriteString("(")
+	for i, parameter := range fe.Parameters {
+		out.WriteString(parameter.Name.String())
+
+		if parameter.Value != nil {
+			out.WriteString(" = " + parameter.Value.String())
+		}
+
+		if i != len(fe.Parameters)-1 {
+			out.WriteString(", ")
+		}
+
+	}
+
+	out.WriteString(")\n")
+	out.WriteString(fe.Body.String())
+	out.WriteString("end")
+
+	return out.String()
+}
+
+type CallExpression struct {
+	Function  Expression
+	Arguments []Expression
+}
+
+func (ce *CallExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(ce.Function.String())
+	out.WriteString("(")
+	for i, arg := range ce.Arguments {
+		out.WriteString(arg.String())
+
+		if i != len(ce.Arguments)-1 {
+			out.WriteString(", ")
+		}
+
+	}
+
+	out.WriteString(")")
+
+	return out.String()
+}
+
+type ClassExpression struct {
+	Token  token.Token
+	Parent Expression
+	Body   []*Parameter
+}
+
+func (ce *ClassExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(ce.Token.Literal)
+
+	if ce.Parent != nil {
+		out.WriteString(" extends ")
+		out.WriteString(ce.Parent.String())
+	}
+	out.WriteString("\n")
+
+	for _, parameter := range ce.Body {
+		out.WriteString(parameter.Name.String())
+		if parameter.Value != nil {
+			out.WriteString(" = ")
+			out.WriteString(parameter.Value.String())
+		}
+
+		out.WriteString("\n")
 	}
 
 	out.WriteString("end")
