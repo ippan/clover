@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ippan/clover/lexer"
 	"github.com/ippan/clover/parser"
+	"github.com/ippan/clover/runtime"
 	"io"
 	"os"
 )
@@ -30,6 +31,8 @@ func startRepl(reader io.Reader) {
 
 		program := p.Parse()
 
+		r := runtime.Runtime{}
+
 		if len(p.Errors()) > 0 {
 			for _, error := range p.Errors() {
 				fmt.Printf("%s\n", error)
@@ -37,7 +40,14 @@ func startRepl(reader io.Reader) {
 			continue
 		}
 
-		fmt.Print(program.String())
+		result := r.Eval(program)
+
+		if result == nil {
+			// TODO : print errors
+			continue
+		}
+
+		fmt.Printf("%s\n", result.Inspect())
 	}
 
 }
