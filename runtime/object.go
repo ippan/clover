@@ -270,34 +270,34 @@ func (n *Null) Inspect() string  { return "null" }
 
 func (n *Null) ToString() *String   { return EMPTY_STRING }
 func (n *Null) ToBoolean() *Boolean { return FALSE }
-func (n *Null) Not() *Boolean { return TRUE }
+func (n *Null) Not() *Boolean       { return TRUE }
 
 var (
-	NULL = &Null{}
-	TRUE  = &Boolean{Value: true}
-	FALSE = &Boolean{Value: false}
+	NULL         = &Null{}
+	TRUE         = &Boolean{Value: true}
+	FALSE        = &Boolean{Value: false}
 	EMPTY_STRING = &String{Value: ""}
 )
 
 type ObjectBinding struct {
-	Name string
-	Value Object
+	Name           string
+	Value          Object
 	BindingContext Context
 }
 
-func (ob *ObjectBinding) Type() ObjectType { return ob.Value.Type() }
-func (ob *ObjectBinding) Inspect() string { return ob.Value.Inspect() }
-func (ob *ObjectBinding) Add(other Object) Object { return ob.Value.Add(other) }
-func (ob *ObjectBinding) Sub(other Object) Object { return ob.Value.Sub(other) }
+func (ob *ObjectBinding) Type() ObjectType             { return ob.Value.Type() }
+func (ob *ObjectBinding) Inspect() string              { return ob.Value.Inspect() }
+func (ob *ObjectBinding) Add(other Object) Object      { return ob.Value.Add(other) }
+func (ob *ObjectBinding) Sub(other Object) Object      { return ob.Value.Sub(other) }
 func (ob *ObjectBinding) Multiply(other Object) Object { return ob.Value.Multiply(other) }
-func (ob *ObjectBinding) Divide(other Object) Object { return ob.Value.Divide(other) }
-func (ob *ObjectBinding) Equal(other Object) *Boolean { return ob.Value.Equal(other) }
-func (ob *ObjectBinding) ToInteger() *Integer { return ob.Value.ToInteger() }
-func (ob *ObjectBinding) ToFloat() *Float { return ob.Value.ToFloat() }
-func (ob *ObjectBinding) ToString() *String { return ob.Value.ToString() }
-func (ob *ObjectBinding) ToBoolean() *Boolean { return ob.Value.ToBoolean() }
-func (ob *ObjectBinding) Not() *Boolean { return ob.Value.Not() }
-func (ob *ObjectBinding) Negative() Object { return ob.Value.Negative() }
+func (ob *ObjectBinding) Divide(other Object) Object   { return ob.Value.Divide(other) }
+func (ob *ObjectBinding) Equal(other Object) *Boolean  { return ob.Value.Equal(other) }
+func (ob *ObjectBinding) ToInteger() *Integer          { return ob.Value.ToInteger() }
+func (ob *ObjectBinding) ToFloat() *Float              { return ob.Value.ToFloat() }
+func (ob *ObjectBinding) ToString() *String            { return ob.Value.ToString() }
+func (ob *ObjectBinding) ToBoolean() *Boolean          { return ob.Value.ToBoolean() }
+func (ob *ObjectBinding) Not() *Boolean                { return ob.Value.Not() }
+func (ob *ObjectBinding) Negative() Object             { return ob.Value.Negative() }
 func (ob *ObjectBinding) UnWarp() Object {
 	if binding, ok := ob.Value.(*ObjectBinding); ok {
 		return binding.UnWarp()

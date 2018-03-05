@@ -36,7 +36,7 @@ func (e *Environment) Set(key string, value Object) {
 }
 
 type FunctionEnvironment struct {
-	slots map[string]Object
+	slots  map[string]Object
 	parent Context
 }
 
@@ -62,6 +62,11 @@ func (fe *FunctionEnvironment) Get(key string) Object {
 }
 
 func (fe *FunctionEnvironment) Set(key string, value Object) {
+	if fe.parent.Exists(key) {
+		fe.parent.Set(key, value)
+		return
+	}
+
 	if binding, ok := value.(*ObjectBinding); ok {
 		fe.slots[key] = binding.UnWarp()
 	} else {
