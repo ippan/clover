@@ -120,48 +120,48 @@ func (i *Integer) Type() ObjectType { return TYPE_INTEGER }
 func (i *Integer) Inspect() string  { return fmt.Sprintf("%d", i.Value) }
 
 func (i *Integer) Add(other Object) Object {
-	if _, ok := other.(*Float); ok {
+	if other.Type() == TYPE_FLOAT {
 		return i.ToFloat().Add(other)
 	}
 
-	if integerObject, ok := other.(*Integer); ok {
-		return &Integer{Value: i.Value + integerObject.Value}
+	if other.Type() == TYPE_INTEGER {
+		return &Integer{Value: i.Value + other.ToInteger().Value}
 	}
 
 	// TODO : raise error
 	return nil
 }
 func (i *Integer) Sub(other Object) Object {
-	if _, ok := other.(*Float); ok {
+	if other.Type() == TYPE_FLOAT {
 		return i.ToFloat().Sub(other)
 	}
 
-	if integerObject, ok := other.(*Integer); ok {
-		return &Integer{Value: i.Value - integerObject.Value}
+	if other.Type() == TYPE_INTEGER {
+		return &Integer{Value: i.Value - other.ToInteger().Value}
 	}
 
 	// TODO : raise error
 	return nil
 }
 func (i *Integer) Multiply(other Object) Object {
-	if _, ok := other.(*Float); ok {
+	if other.Type() == TYPE_FLOAT {
 		return i.ToFloat().Multiply(other)
 	}
 
-	if integerObject, ok := other.(*Integer); ok {
-		return &Integer{Value: i.Value * integerObject.Value}
+	if other.Type() == TYPE_INTEGER {
+		return &Integer{Value: i.Value * other.ToInteger().Value}
 	}
 
 	// TODO : raise error
 	return nil
 }
 func (i *Integer) Divide(other Object) Object {
-	if _, ok := other.(*Float); ok {
+	if other.Type() == TYPE_FLOAT {
 		return i.ToFloat().Divide(other)
 	}
 
-	if integerObject, ok := other.(*Integer); ok {
-		return &Integer{Value: i.Value / integerObject.Value}
+	if other.Type() == TYPE_INTEGER {
+		return &Integer{Value: i.Value / other.ToInteger().Value}
 	}
 
 	// TODO : raise error
@@ -169,8 +169,8 @@ func (i *Integer) Divide(other Object) Object {
 }
 
 func (i *Integer) Equal(other Object) *Boolean {
-	if otherInteger, ok := other.(*Integer); ok {
-		if i.Value == otherInteger.Value {
+	if other.Type() == TYPE_INTEGER {
+		if i.Value == other.ToInteger().Value {
 			return TRUE
 		}
 	}
@@ -178,8 +178,13 @@ func (i *Integer) Equal(other Object) *Boolean {
 }
 
 func (i *Integer) Compare(other Object) *Integer {
-	if _, ok := other.(*Float); ok {
+	if other.Type() == TYPE_FLOAT {
 		return i.ToFloat().Compare(other)
+	}
+
+	if other.Type() != TYPE_INTEGER {
+		// TODO : raise error
+		return nil
 	}
 
 	value := i.Value - other.ToInteger().Value
@@ -222,8 +227,8 @@ func (f *Float) Multiply(other Object) Object { return &Float{Value: f.Value * o
 func (f *Float) Divide(other Object) Object   { return &Float{Value: f.Value / other.ToFloat().Value} }
 
 func (f *Float) Equal(other Object) *Boolean {
-	if otherFloat, ok := other.(*Float); ok {
-		if f.Value == otherFloat.Value {
+	if other.Type() == TYPE_FLOAT {
+		if f.Value == other.ToFloat().Value {
 			return TRUE
 		}
 	}
@@ -231,18 +236,13 @@ func (f *Float) Equal(other Object) *Boolean {
 }
 
 func (f *Float) Compare(other Object) *Integer {
-	var otherValue float64
 
-	if integerValue, ok := other.(*Integer); ok {
-		otherValue = float64(integerValue.Value)
-	} else if floatValue, ok := other.(*Float); ok {
-		otherValue = floatValue.Value
-	} else {
+	if other.Type() != TYPE_FLOAT && other.Type() != TYPE_INTEGER {
 		// TODO : raise error
 		return nil
 	}
 
-	value := f.Value - otherValue
+	value := f.Value - other.ToFloat().Value
 
 	if value > 0.0 {
 		return ONE
@@ -321,8 +321,8 @@ func (b *Boolean) Type() ObjectType { return TYPE_BOOLEAN }
 func (b *Boolean) Inspect() string  { return fmt.Sprintf("%t", b.Value) }
 
 func (b *Boolean) Equal(other Object) *Boolean {
-	if otherBoolean, ok := other.(*Boolean); ok {
-		if b.Value == otherBoolean.Value {
+	if other.Type() == TYPE_BOOLEAN {
+		if b.Value == other.ToBoolean().Value {
 			return TRUE
 		}
 	}
