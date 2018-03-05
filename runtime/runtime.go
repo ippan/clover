@@ -23,6 +23,8 @@ func (r *Runtime) eval(node ast.Node, context Context) Object {
 		return r.evalProgram(node, context)
 	case *ast.ExpressionStatement:
 		return r.eval(node.Expression, context)
+	case *ast.ReturnStatement:
+		return r.evalReturnStatement(node, context)
 	case *ast.IntegerLiteral:
 		return &Integer{Value: node.Value}
 	case *ast.FloatLiteral:
@@ -39,8 +41,14 @@ func (r *Runtime) eval(node ast.Node, context Context) Object {
 		return r.evalInfixExpression(node, context)
 	case *ast.IfExpression:
 		return r.evalIfExpression(node, context)
+	case *ast.WhileExpression:
+		return r.evalWhileExpression(node, context)
 	case *ast.Identifier:
 		return context.Get(node.Value)
+	case *ast.FunctionExpression:
+		return r.evalFunctionExpression(node, context)
+	case *ast.CallExpression:
+		return r.evalCallExpression(node, context)
 	}
 
 	return nil
@@ -58,9 +66,22 @@ func (r *Runtime) evalProgram(program *ast.Program, context Context) Object {
 
 	for _, statement := range program.Statements {
 		result = r.eval(statement, context)
+		if _, ok := result.(*Return); ok {
+			return result
+		}
 	}
 
 	return result
+}
+
+func (r *Runtime) evalReturnStatement(rs *ast.ReturnStatement, context Context) Object {
+	var result Object = NULL
+
+	if rs.ReturnValue != nil {
+		result = r.eval(rs.ReturnValue, context)
+	}
+
+	return &Return{Value: result}
 }
 
 func (r *Runtime) evalInfixExpression(ie *ast.InfixExpression, context Context) Object {
@@ -90,6 +111,24 @@ func (r *Runtime) evalInfixExpression(ie *ast.InfixExpression, context Context) 
 		return r.evalAssignExpression(left, left.Multiply(r.eval(ie.Right, context)))
 	case token.SLASH_ASSIGN:
 		return r.evalAssignExpression(left, left.Divide(r.eval(ie.Right, context)))
+	case token.GREATER:
+		return getBooleanObject(left.Compare(r.eval(ie.Right, context)).Value > 0)
+	case token.LESS:
+		return getBooleanObject(left.Compare(r.eval(ie.Right, context)).Value < 0)
+	case token.GREATER_EQUAL:
+		return getBooleanObject(left.Compare(r.eval(ie.Right, context)).Value >= 0)
+	case token.LESS_EQUAL:
+		return getBooleanObject(left.Compare(r.eval(ie.Right, context)).Value <= 0)
+	case token.AND:
+		if left.ToBoolean().Value == false {
+			return left
+		}
+		return r.eval(ie.Right, context)
+	case token.OR:
+		if left.ToBoolean().Value {
+			return left
+		}
+		return r.eval(ie.Right, context)
 	}
 
 	return nil
@@ -117,11 +156,68 @@ func (r *Runtime) evalPrefixExpression(pe *ast.PrefixExpression, context Context
 }
 
 func (r *Runtime) evalIfExpression(ie *ast.IfExpression, context Context) Object {
-	if r.eval(ie.Condition, context).ToBoolean().Value {
-		return r.eval(ie.TruePart, context)
+	fe := NewFunctionEnvironment(context)
+	if r.eval(ie.Condition, fe).ToBoolean().Value {
+		return r.eval(ie.TruePart, NewFunctionEnvironment(fe))
 	} else if ie.FalsePart != nil {
-		return r.eval(ie.FalsePart, context)
+		return r.eval(ie.FalsePart, NewFunctionEnvironment(fe))
 	}
 
 	return NULL
+}
+
+func (r *Runtime) evalWhileExpression(ie *ast.WhileExpression, context Context) Object {
+	fe := NewFunctionEnvironment(context)
+	var result Object = NULL
+
+	for r.eval(ie.Condition, fe).ToBoolean().Value {
+		result = r.eval(ie.Body, fe)
+		if _, ok := result.(*Return); ok {
+			return result
+		}
+		fe = NewFunctionEnvironment(context)
+	}
+
+	return result
+}
+
+func (r *Runtime) evalFunctionExpression(fe *ast.FunctionExpression, context Context) Object {
+	return &Function{BindingContext: context, Parameters: fe.Parameters, Body: fe.Body}
+}
+
+func unwrap(wrapped Object) Object {
+	if binding, ok := wrapped.(*ObjectBinding); ok {
+		return binding.UnWarp()
+	}
+	return wrapped
+}
+
+func (r *Runtime) evalCallExpression(ce *ast.CallExpression, context Context) Object {
+
+	if f, ok := unwrap(r.eval(ce.Function, context)).(*Function); ok {
+		fe := NewFunctionEnvironment(f.BindingContext)
+
+		for i, parameter := range f.Parameters {
+			if i < len(ce.Arguments) {
+				// argument - use caller context
+				fe.InstanceSet(parameter.Name.Value, r.eval(ce.Arguments[i], context))
+			} else if parameter.Value != nil {
+				// optional parameter - use function context
+				fe.InstanceSet(parameter.Name.Value, r.eval(parameter.Value, f.BindingContext))
+			} else {
+				fe.InstanceSet(parameter.Name.Value, NULL)
+			}
+		}
+
+		result := r.eval(f.Body, fe)
+
+		if returnObject, ok := result.(*Return); ok {
+			return returnObject.Value
+		}
+
+		return result
+	}
+
+	// TODO : raise error
+	return nil
 }

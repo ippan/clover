@@ -1,15 +1,18 @@
 package runtime
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/ippan/clover/ast"
 	"strconv"
 )
 
 type ObjectType string
 
 const (
-	TYPE_NULL  = "NULL"
-	TYPE_ERROR = "ERROR"
+	TYPE_NULL   = "NULL"
+	TYPE_ERROR  = "ERROR"
+	TYPE_RETURN = "RETURN"
 
 	TYPE_INTEGER = "INTEGER"
 	TYPE_FLOAT   = "FLOAT"
@@ -20,6 +23,16 @@ const (
 	TYPE_INSTANCE = "INSTANCE"
 
 	TYPE_FUNCTION = "FUNCTION"
+)
+
+var (
+	NULL         = &Null{}
+	TRUE         = &Boolean{Value: true}
+	FALSE        = &Boolean{Value: false}
+	EMPTY_STRING = &String{Value: ""}
+	ONE          = &Integer{Value: 1}
+	MINUS_ONE    = &Integer{Value: -1}
+	ZERO         = &Integer{Value: 0}
 )
 
 type Object interface {
@@ -37,6 +50,7 @@ type Object interface {
 	Divide(other Object) Object
 
 	Equal(other Object) *Boolean
+	Compare(other Object) *Integer
 
 	ToInteger() *Integer
 	ToFloat() *Float
@@ -85,8 +99,13 @@ func (bo *BaseObject) ToString() *String {
 }
 
 func (bo *BaseObject) Equal(other Object) *Boolean { return FALSE }
-func (bo *BaseObject) ToBoolean() *Boolean         { return TRUE }
-func (bo *BaseObject) Not() *Boolean               { return bo.ToBoolean().Not() }
+func (bo *BaseObject) Compare(other Object) *Integer {
+	// TODO : raise error
+	return nil
+}
+
+func (bo *BaseObject) ToBoolean() *Boolean { return TRUE }
+func (bo *BaseObject) Not() *Boolean       { return bo.ToBoolean().Not() }
 func (bo *BaseObject) Negative() Object {
 	// TODO : raise error
 	return nil
@@ -105,28 +124,48 @@ func (i *Integer) Add(other Object) Object {
 		return i.ToFloat().Add(other)
 	}
 
-	return &Integer{Value: i.Value + other.ToInteger().Value}
+	if integerObject, ok := other.(*Integer); ok {
+		return &Integer{Value: i.Value + integerObject.Value}
+	}
+
+	// TODO : raise error
+	return nil
 }
 func (i *Integer) Sub(other Object) Object {
 	if _, ok := other.(*Float); ok {
 		return i.ToFloat().Sub(other)
 	}
 
-	return &Integer{Value: i.Value - other.ToInteger().Value}
+	if integerObject, ok := other.(*Integer); ok {
+		return &Integer{Value: i.Value - integerObject.Value}
+	}
+
+	// TODO : raise error
+	return nil
 }
 func (i *Integer) Multiply(other Object) Object {
 	if _, ok := other.(*Float); ok {
 		return i.ToFloat().Multiply(other)
 	}
 
-	return &Integer{Value: i.Value * other.ToInteger().Value}
+	if integerObject, ok := other.(*Integer); ok {
+		return &Integer{Value: i.Value * integerObject.Value}
+	}
+
+	// TODO : raise error
+	return nil
 }
 func (i *Integer) Divide(other Object) Object {
 	if _, ok := other.(*Float); ok {
 		return i.ToFloat().Divide(other)
 	}
 
-	return &Integer{Value: i.Value / other.ToInteger().Value}
+	if integerObject, ok := other.(*Integer); ok {
+		return &Integer{Value: i.Value / integerObject.Value}
+	}
+
+	// TODO : raise error
+	return nil
 }
 
 func (i *Integer) Equal(other Object) *Boolean {
@@ -136,6 +175,22 @@ func (i *Integer) Equal(other Object) *Boolean {
 		}
 	}
 	return FALSE
+}
+
+func (i *Integer) Compare(other Object) *Integer {
+	if _, ok := other.(*Float); ok {
+		return i.ToFloat().Compare(other)
+	}
+
+	value := i.Value - other.ToInteger().Value
+
+	if value > 0 {
+		return ONE
+	} else if value < 0 {
+		return MINUS_ONE
+	} else {
+		return ZERO
+	}
 }
 
 func (i *Integer) Not() *Boolean { return i.ToBoolean().Not() }
@@ -173,6 +228,29 @@ func (f *Float) Equal(other Object) *Boolean {
 		}
 	}
 	return FALSE
+}
+
+func (f *Float) Compare(other Object) *Integer {
+	var otherValue float64
+
+	if integerValue, ok := other.(*Integer); ok {
+		otherValue = float64(integerValue.Value)
+	} else if floatValue, ok := other.(*Float); ok {
+		otherValue = floatValue.Value
+	} else {
+		// TODO : raise error
+		return nil
+	}
+
+	value := f.Value - otherValue
+
+	if value > 0.0 {
+		return ONE
+	} else if value < 0.0 {
+		return MINUS_ONE
+	} else {
+		return ZERO
+	}
 }
 
 func (f *Float) Not() *Boolean { return f.ToBoolean().Not() }
@@ -272,35 +350,70 @@ func (n *Null) ToString() *String   { return EMPTY_STRING }
 func (n *Null) ToBoolean() *Boolean { return FALSE }
 func (n *Null) Not() *Boolean       { return TRUE }
 
-var (
-	NULL         = &Null{}
-	TRUE         = &Boolean{Value: true}
-	FALSE        = &Boolean{Value: false}
-	EMPTY_STRING = &String{Value: ""}
-)
-
 type ObjectBinding struct {
 	Name           string
 	Value          Object
 	BindingContext Context
 }
 
-func (ob *ObjectBinding) Type() ObjectType             { return ob.Value.Type() }
-func (ob *ObjectBinding) Inspect() string              { return ob.Value.Inspect() }
-func (ob *ObjectBinding) Add(other Object) Object      { return ob.Value.Add(other) }
-func (ob *ObjectBinding) Sub(other Object) Object      { return ob.Value.Sub(other) }
-func (ob *ObjectBinding) Multiply(other Object) Object { return ob.Value.Multiply(other) }
-func (ob *ObjectBinding) Divide(other Object) Object   { return ob.Value.Divide(other) }
-func (ob *ObjectBinding) Equal(other Object) *Boolean  { return ob.Value.Equal(other) }
-func (ob *ObjectBinding) ToInteger() *Integer          { return ob.Value.ToInteger() }
-func (ob *ObjectBinding) ToFloat() *Float              { return ob.Value.ToFloat() }
-func (ob *ObjectBinding) ToString() *String            { return ob.Value.ToString() }
-func (ob *ObjectBinding) ToBoolean() *Boolean          { return ob.Value.ToBoolean() }
-func (ob *ObjectBinding) Not() *Boolean                { return ob.Value.Not() }
-func (ob *ObjectBinding) Negative() Object             { return ob.Value.Negative() }
+func (ob *ObjectBinding) Type() ObjectType              { return ob.Value.Type() }
+func (ob *ObjectBinding) Inspect() string               { return ob.Value.Inspect() }
+func (ob *ObjectBinding) Add(other Object) Object       { return ob.Value.Add(other) }
+func (ob *ObjectBinding) Sub(other Object) Object       { return ob.Value.Sub(other) }
+func (ob *ObjectBinding) Multiply(other Object) Object  { return ob.Value.Multiply(other) }
+func (ob *ObjectBinding) Divide(other Object) Object    { return ob.Value.Divide(other) }
+func (ob *ObjectBinding) Equal(other Object) *Boolean   { return ob.Value.Equal(other) }
+func (ob *ObjectBinding) Compare(other Object) *Integer { return ob.Value.Compare(other) }
+func (ob *ObjectBinding) ToInteger() *Integer           { return ob.Value.ToInteger() }
+func (ob *ObjectBinding) ToFloat() *Float               { return ob.Value.ToFloat() }
+func (ob *ObjectBinding) ToString() *String             { return ob.Value.ToString() }
+func (ob *ObjectBinding) ToBoolean() *Boolean           { return ob.Value.ToBoolean() }
+func (ob *ObjectBinding) Not() *Boolean                 { return ob.Value.Not() }
+func (ob *ObjectBinding) Negative() Object              { return ob.Value.Negative() }
 func (ob *ObjectBinding) UnWarp() Object {
 	if binding, ok := ob.Value.(*ObjectBinding); ok {
 		return binding.UnWarp()
 	}
 	return ob.Value
+}
+
+type Function struct {
+	BaseObject
+	BindingContext Context
+	Parameters     []*ast.Parameter
+	Body           *ast.Program
+}
+
+func (f *Function) Type() ObjectType { return TYPE_FUNCTION }
+func (f *Function) Inspect() string {
+	var out bytes.Buffer
+
+	out.WriteString("function(")
+	for i, parameter := range f.Parameters {
+		out.WriteString(parameter.Name.String())
+
+		if parameter.Value != nil {
+			out.WriteString(" = " + parameter.Value.String())
+		}
+
+		if i != len(f.Parameters)-1 {
+			out.WriteString(", ")
+		}
+	}
+
+	out.WriteString(")\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("end")
+
+	return out.String()
+}
+
+type Return struct {
+	BaseObject
+	Value Object
+}
+
+func (r *Return) Type() ObjectType { return TYPE_RETURN }
+func (r *Return) Inspect() string {
+	return fmt.Sprintf("return %s", r.Value.Inspect())
 }
