@@ -14,6 +14,7 @@ const prompt = "clover>"
 
 func startRepl(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
+	r := runtime.New()
 
 	for {
 		fmt.Print(prompt)
@@ -30,8 +31,6 @@ func startRepl(reader io.Reader) {
 		p := parser.New(l)
 
 		program := p.Parse()
-
-		r := runtime.Runtime{}
 
 		if len(p.Errors()) > 0 {
 			for _, error := range p.Errors() {
