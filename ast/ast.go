@@ -105,6 +105,18 @@ type NullLiteral struct {
 
 func (nl *NullLiteral) String() string { return nl.Token.Literal }
 
+type BaseLiteral struct {
+	Token token.Token
+}
+
+func (bl *BaseLiteral) String() string { return bl.Token.Literal }
+
+type ThisLiteral struct {
+	Token token.Token
+}
+
+func (tl *ThisLiteral) String() string { return tl.Token.Literal }
+
 type PrefixExpression struct {
 	Token token.Token
 	Right Expression

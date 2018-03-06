@@ -49,6 +49,8 @@ func (r *Runtime) eval(node ast.Node, context Context) Object {
 		return r.evalFunctionExpression(node, context)
 	case *ast.CallExpression:
 		return r.evalCallExpression(node, context)
+	case *ast.ClassExpression:
+		return r.evalClassExpression(node, context)
 	}
 
 	return nil
@@ -129,6 +131,8 @@ func (r *Runtime) evalInfixExpression(ie *ast.InfixExpression, context Context) 
 			return left
 		}
 		return r.eval(ie.Right, context)
+	case token.DOT:
+		return r.evalGetMemberExpression(left, ie.Right)
 	}
 
 	return nil
@@ -192,32 +196,76 @@ func unwrap(wrapped Object) Object {
 	return wrapped
 }
 
+func (r *Runtime) prepareParameters(context Context, bindingContext Context, parameterContext Context, parameters []*ast.Parameter, arguments []ast.Expression) {
+	for i, parameter := range parameters {
+		if i < len(arguments) {
+			// argument - use caller context
+			parameterContext.InstanceSet(parameter.Name.Value, r.eval(arguments[i], context))
+		} else if parameter.Value != nil {
+			// optional parameter - use function context
+			parameterContext.InstanceSet(parameter.Name.Value, r.eval(parameter.Value, bindingContext))
+		} else {
+			parameterContext.InstanceSet(parameter.Name.Value, NULL)
+		}
+	}
+}
+
 func (r *Runtime) evalCallExpression(ce *ast.CallExpression, context Context) Object {
 
-	if f, ok := unwrap(r.eval(ce.Function, context)).(*Function); ok {
-		fe := NewFunctionEnvironment(f.BindingContext)
+	var result Object = NULL
 
-		for i, parameter := range f.Parameters {
-			if i < len(ce.Arguments) {
-				// argument - use caller context
-				fe.InstanceSet(parameter.Name.Value, r.eval(ce.Arguments[i], context))
-			} else if parameter.Value != nil {
-				// optional parameter - use function context
-				fe.InstanceSet(parameter.Name.Value, r.eval(parameter.Value, f.BindingContext))
-			} else {
-				fe.InstanceSet(parameter.Name.Value, NULL)
+	switch function := unwrap(r.eval(ce.Function, context)).(type) {
+	case *Function:
+		fe := NewFunctionEnvironment(function.BindingContext)
+		r.prepareParameters(context, function.BindingContext, fe, function.Parameters, ce.Arguments)
+		result = r.eval(function.Body, fe)
+	case *Constructor:
+		return NULL
+	default:
+		// TODO : raise error
+		return nil
+	}
+
+	if returnObject, ok := result.(*Return); ok {
+		return returnObject.Value
+	}
+
+	return result
+}
+
+func (r *Runtime) evalClassExpression(ce *ast.ClassExpression, context Context) Object {
+
+	c := &Class{BindingContext: context, Body: ce.Body}
+
+	if ce.Parent != nil {
+		c.Parent = unwrap(r.eval(ce.Parent, context))
+
+		if c.Parent.Type() != TYPE_CLASS {
+			// TODO : raise error
+			return nil
+		}
+
+	}
+
+	return c
+}
+
+func (r *Runtime) evalGetMemberExpression(receiver Object, member ast.Expression) Object {
+
+	if identifier, ok := member.(*ast.Identifier); ok {
+		if receiver.Type() == TYPE_CLASS && identifier.Value == "new" {
+			if classObject, ok := unwrap(receiver).(*Class); ok {
+				return r.evalConstructorExpression(classObject)
 			}
 		}
 
-		result := r.eval(f.Body, fe)
-
-		if returnObject, ok := result.(*Return); ok {
-			return returnObject.Value
-		}
-
-		return result
+		return receiver.GetMember(identifier.Value)
 	}
 
 	// TODO : raise error
 	return nil
+}
+
+func (r *Runtime) evalConstructorExpression(classObject *Class) Object {
+	return &Constructor{Receiver: classObject}
 }

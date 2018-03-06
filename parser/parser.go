@@ -18,8 +18,8 @@ const (
 	SUM
 	PRODUCT
 	PREFIX
-	DOT
 	CALL
+	DOT
 )
 
 var precedences = map[token.TokenType]int{
@@ -69,6 +69,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixFunctions = make(map[token.TokenType]prefixFunction)
 
 	p.registerPrefixFunction(token.IDENTIFIER, p.parseIdentifier)
+	p.registerPrefixFunction(token.BASE, p.parseBaseLiteral)
+	p.registerPrefixFunction(token.THIS, p.parseThisLiteral)
 	p.registerPrefixFunction(token.INTEGER, p.parseIntegerLiteral)
 	p.registerPrefixFunction(token.FLOAT, p.parseFloatLiteral)
 	p.registerPrefixFunction(token.TRUE, p.parseBooleanLiteral)
@@ -256,6 +258,14 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 func (p *Parser) parseIdentifier() ast.Expression {
 	return &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
+}
+
+func (p *Parser) parseBaseLiteral() ast.Expression {
+	return &ast.BaseLiteral{Token: p.currentToken}
+}
+
+func (p *Parser) parseThisLiteral() ast.Expression {
+	return &ast.ThisLiteral{Token: p.currentToken}
 }
 
 func (p *Parser) parseIntegerLiteral() ast.Expression {

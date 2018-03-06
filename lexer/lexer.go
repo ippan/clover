@@ -27,6 +27,8 @@ var keywordTokens = map[string]token.TokenType{
 	"extends":  token.EXTENDS,
 	"return":   token.RETURN,
 	"while":    token.WHILE,
+	"base":     token.BASE,
+	"this":     token.THIS,
 }
 
 var symbolTokens = map[string]token.TokenType{

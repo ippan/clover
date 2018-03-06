@@ -19,8 +19,9 @@ const (
 	TYPE_BOOLEAN = "BOOLEAN"
 	TYPE_STRING  = "STRING"
 
-	TYPE_CLASS    = "CLASS"
-	TYPE_INSTANCE = "INSTANCE"
+	TYPE_CLASS       = "CLASS"
+	TYPE_INSTANCE    = "INSTANCE"
+	TYPE_CONSTRUCTOR = "CONSTRUCTOR"
 
 	TYPE_FUNCTION = "FUNCTION"
 )
@@ -59,6 +60,8 @@ type Object interface {
 
 	Not() *Boolean
 	Negative() Object
+
+	GetMember(key string) Object
 }
 
 type BaseObject struct {
@@ -107,6 +110,11 @@ func (bo *BaseObject) Compare(other Object) *Integer {
 func (bo *BaseObject) ToBoolean() *Boolean { return TRUE }
 func (bo *BaseObject) Not() *Boolean       { return bo.ToBoolean().Not() }
 func (bo *BaseObject) Negative() Object {
+	// TODO : raise error
+	return nil
+}
+
+func (bo *BaseObject) GetMember(key string) Object {
 	// TODO : raise error
 	return nil
 }
@@ -376,6 +384,7 @@ func (ob *ObjectBinding) UnWarp() Object {
 	}
 	return ob.Value
 }
+func (ob *ObjectBinding) GetMember(key string) Object { return ob.Value.GetMember(key) }
 
 type Function struct {
 	BaseObject
@@ -416,4 +425,64 @@ type Return struct {
 func (r *Return) Type() ObjectType { return TYPE_RETURN }
 func (r *Return) Inspect() string {
 	return fmt.Sprintf("return %s", r.Value.Inspect())
+}
+
+type Class struct {
+	BaseObject
+	BindingContext Context
+	Parent         Object
+	Body           []*ast.Parameter
+}
+
+func (c *Class) Type() ObjectType { return TYPE_CLASS }
+func (c *Class) Inspect() string {
+	var out bytes.Buffer
+
+	out.WriteString("class")
+
+	if c.Parent != nil {
+		out.WriteString(" extends ")
+		out.WriteString(c.Parent.Inspect())
+	}
+
+	out.WriteString("\n")
+
+	for _, parameter := range c.Body {
+		out.WriteString(parameter.Name.String())
+
+		if parameter.Value != nil {
+			out.WriteString(" = ")
+			out.WriteString(parameter.Value.String())
+		}
+
+		out.WriteString("\n")
+	}
+
+	out.WriteString("end")
+
+	return out.String()
+}
+
+func (c *Class) GetMember(key string) Object {
+
+	return NULL
+
+}
+
+type Constructor struct {
+	BaseObject
+	Receiver *Class
+}
+
+func (c *Constructor) Type() ObjectType { return TYPE_CONSTRUCTOR }
+func (c *Constructor) Inspect() string  { return "new" }
+
+type Instance struct {
+	BaseObject
+}
+
+func (i *Instance) Type() ObjectType { return TYPE_INSTANCE }
+func (i *Instance) Inspect() string {
+	// TODO : implement later
+	return ""
 }
