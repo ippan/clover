@@ -220,7 +220,7 @@ func (r *Runtime) evalCallExpression(ce *ast.CallExpression, context Context) Ob
 		r.prepareParameters(context, function.BindingContext, fe, function.Parameters, ce.Arguments)
 		result = r.eval(function.Body, fe)
 	case *Constructor:
-		return NULL
+		return r.evalCallConstructorExpression(function, ce.Arguments, context)
 	default:
 		// TODO : raise error
 		return nil
@@ -255,7 +255,7 @@ func (r *Runtime) evalGetMemberExpression(receiver Object, member ast.Expression
 	if identifier, ok := member.(*ast.Identifier); ok {
 		if receiver.Type() == TYPE_CLASS && identifier.Value == "new" {
 			if classObject, ok := unwrap(receiver).(*Class); ok {
-				return r.evalConstructorExpression(classObject)
+				return &Constructor{Receiver: classObject}
 			}
 		}
 
@@ -266,6 +266,7 @@ func (r *Runtime) evalGetMemberExpression(receiver Object, member ast.Expression
 	return nil
 }
 
-func (r *Runtime) evalConstructorExpression(classObject *Class) Object {
-	return &Constructor{Receiver: classObject}
+func (r *Runtime) evalCallConstructorExpression(constructor *Constructor, arguments []ast.Expression, context Context) Object {
+
+	return nil
 }
