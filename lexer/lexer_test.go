@@ -24,7 +24,7 @@ func TestLexClass(t *testing.T) {
 	input := "test = class Test extends TestParent end"
 	tokenExpected := []token.Token{
 		{token.IDENTIFIER, "test"},
-		{token.EQUAL, "="},
+		{token.ASSIGN, "="},
 		{token.CLASS, "class"},
 		{token.IDENTIFIER, "Test"},
 		{token.EXTENDS, "extends"},
@@ -41,7 +41,7 @@ func TestLexString(t *testing.T) {
 	input := `test = "this is string."`
 	tokenExpected := []token.Token{
 		{token.IDENTIFIER, "test"},
-		{token.EQUAL, "="},
+		{token.ASSIGN, "="},
 		{token.STRING, "this is string."},
 	}
 
@@ -54,7 +54,7 @@ func TestLexFunctions(t *testing.T) {
 	input := "test = function Test() end"
 	tokenExpected := []token.Token{
 		{token.IDENTIFIER, "test"},
-		{token.EQUAL, "="},
+		{token.ASSIGN, "="},
 		{token.FUNCTION, "function"},
 		{token.IDENTIFIER, "Test"},
 		{token.LEFT_PARENTHESES, "("},
