@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clover", "Clover\Clover.csproj", "{6D840547-2EC0-457E-BF77-EE3FDBD101E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloverCli", "CloverCli\CloverCli.csproj", "{23B520A4-3965-4BE7-AFBA-AC32606D373A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clover.Tests", "Clover.Tests\Clover.Tests.csproj", "{D0D67B3B-EE8B-4754-8774-7E1F36EEFF84}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6D840547-2EC0-457E-BF77-EE3FDBD101E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D840547-2EC0-457E-BF77-EE3FDBD101E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D840547-2EC0-457E-BF77-EE3FDBD101E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D840547-2EC0-457E-BF77-EE3FDBD101E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23B520A4-3965-4BE7-AFBA-AC32606D373A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23B520A4-3965-4BE7-AFBA-AC32606D373A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23B520A4-3965-4BE7-AFBA-AC32606D373A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23B520A4-3965-4BE7-AFBA-AC32606D373A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0D67B3B-EE8B-4754-8774-7E1F36EEFF84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0D67B3B-EE8B-4754-8774-7E1F36EEFF84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0D67B3B-EE8B-4754-8774-7E1F36EEFF84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0D67B3B-EE8B-4754-8774-7E1F36EEFF84}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

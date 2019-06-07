@@ -1,0 +1,13 @@
+
+local cc = function(gg = 1, yy)
+  local a = 10 * 20
+  gg + yy + a
+end
+
+cc
+
+local abc = function(hh, jj)
+  hh + jj
+end
+
+abc(3, 5)
