@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Clover.Ast;
 using Clover.Runtime;
 using Boolean = System.Boolean;
+using Object = Clover.Runtime.Object;
 
 namespace Clover
 {
@@ -30,7 +31,37 @@ namespace Clover
             compiler_functions[typeof(Identifier)] = CompileIdentifier;
             compiler_functions[typeof(FunctionExpression)] = CompileFunctionExpression;
             compiler_functions[typeof(CallExpression)] = CompileCallExpression;
+            compiler_functions[typeof(ReturnExpression)] = CompileReturnExpression;
+            compiler_functions[typeof(InstanceGetExpression)] = CompileInstanceGetExpression;
 
+        }
+
+        private bool CompileInstanceGetExpression(Node node, Context context)
+        {
+            InstanceGetExpression instance_get_expression = (InstanceGetExpression)node;
+            Compile(instance_get_expression.Instance, context);
+            Compile(instance_get_expression.Index, context);
+            context.Bytecode.Add(OpCode.InstanceGet);
+
+            return true;
+        }
+
+        private bool CompileReturnExpression(Node node, Context context)
+        {
+            ReturnExpression return_expression = (ReturnExpression)node;
+
+            if (return_expression.Value != null)
+            {
+                Compile(return_expression.Value, context);
+            }
+            else
+            {
+                context.Bytecode.Add(OpCode.Null, return_expression.Data);
+            }
+
+            context.Bytecode.Add(OpCode.Return, return_expression.Data);
+
+            return true;
         }
 
         private bool CompileCallExpression(Node node, Context context)
@@ -113,8 +144,13 @@ namespace Clover
                 return true;
             }
 
-            // TODO : raise error
-            return false;
+            Int32 index = AddConstant(new Runtime.String { Value = identifier.Data.Value }, context);
+            context.Bytecode.Add(OpCode.Constant, identifier.Data);
+            context.Bytecode.Add(index);
+
+            context.Bytecode.Add(OpCode.GetGlobal);
+            
+            return true;
         }
 
         public Context Compile(Node node)
@@ -171,14 +207,21 @@ namespace Clover
             return true;
         }
 
+        private Int32 AddConstant(Object value, Context context)
+        {
+            // TODO : use a search table
+            for (int i = 0; i < context.Constants.Count; i += 1)
+                if (value.Equal(context.Constants[i]).Value)
+                    return i;
+            
+            context.Constants.Add(value);
+            return context.Constants.Count - 1;
+        }
+
         private bool CompileIntegerLiteral(Node node, Context context)
         {
-            Int32 index = context.Constants.Count;
-            
-            context.Constants.Add(new Integer { Value = ((IntegerLiteral)node).Value });
-            
             context.Bytecode.Instructions.Add(OpCode.Constant);
-            context.Bytecode.Instructions.Add(index);
+            context.Bytecode.Instructions.Add(AddConstant(new Integer { Value = ((IntegerLiteral)node).Value }, context));
             
             PushTokenData(((IntegerLiteral)node).Data, context.Bytecode);
             PushTokenData(((IntegerLiteral)node).Data, context.Bytecode);
@@ -245,10 +288,14 @@ namespace Clover
         {
             InfixExpression infix_expression = node as InfixExpression;
 
-            Compile(infix_expression.Left, context);
-            Compile(infix_expression.Right, context);
-            
-            PushTokenData(infix_expression.Data, context.Bytecode);
+            if (infix_expression.Data.Token != Token.Assign)
+            {
+                Compile(infix_expression.Left, context);
+                Compile(infix_expression.Right, context);
+
+                PushTokenData(infix_expression.Data, context.Bytecode);
+            }
+
             switch (infix_expression.Data.Token)
             {
                 case Token.Plus:
@@ -291,12 +338,20 @@ namespace Clover
             Identifier identifier = (Identifier)node.Left;
 
             Symbol symbol = scope.FindLocal(identifier.Data.Value);
-            
+
             if (symbol != null)
             {
                 context.Bytecode.Add(OpCode.SetLocal, identifier.Data);
                 context.Bytecode.Add(symbol.Index);
                 return true;
+            }
+            
+            if (scope.IsTopLevel)
+            {
+                Int32 index = AddConstant(new Runtime.String { Value = identifier.Data.Value }, context);
+                context.Bytecode.Add(OpCode.Constant, identifier.Data);
+                context.Bytecode.Add(index);
+                context.Bytecode.Add(OpCode.SetGlobal);
             }
 
             return false;
@@ -349,7 +404,7 @@ namespace Clover
             LocalExpression local_expression = (LocalExpression)node;
 
             Symbol symbol = scope.DefineLocal(local_expression.Identifier.Data.Value);
-            
+
             if (local_expression.Value != null)
             {
                 Compile(local_expression.Value, context);

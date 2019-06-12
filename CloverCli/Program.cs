@@ -41,7 +41,7 @@ namespace CloverCli
                 Parser parser = new Parser();
                 Node node = parser.Parse(args[0]);
                 
-                //Console.WriteLine(node.ToString());
+                Console.WriteLine(node.ToString());
                 
                 Compiler compiler = new Compiler();
                 Context context = compiler.Compile(node);

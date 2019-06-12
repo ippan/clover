@@ -40,7 +40,7 @@ namespace Clover
             Product,
             Prefix,
             Call,
-            Dot
+            InstanceGet
         }
 
         private static readonly Dictionary<Token, SymbolPriority> precedences = new Dictionary<Token, SymbolPriority>
@@ -64,7 +64,8 @@ namespace Clover
             { Token.Slash, SymbolPriority.Product },
             { Token.BitAnd, SymbolPriority.Product },
             { Token.BitOr, SymbolPriority.Product },
-            { Token.Dot, SymbolPriority.Dot },
+            { Token.Dot, SymbolPriority.InstanceGet },
+            { Token.LeftBracket, SymbolPriority.InstanceGet },
             { Token.LeftParentheses, SymbolPriority.Call }
         };
         
@@ -118,13 +119,49 @@ namespace Clover
             infix_functions[Token.Slash] = ParseInfixExpression;
             infix_functions[Token.BitAnd] = ParseInfixExpression;
             infix_functions[Token.BitOr] = ParseInfixExpression;
-            infix_functions[Token.Dot] = ParseInfixExpression;
+            infix_functions[Token.Dot] = ParseInstanceGetExpression;
+            infix_functions[Token.LeftBracket] = ParseInstanceGetExpression;
             infix_functions[Token.LeftParentheses] = ParseCallExpression;
+        }
+
+        private Expression ParseInstanceGetExpression(Expression instnace)
+        {
+            InstanceGetExpression instance_get_expression = new InstanceGetExpression { Instance = instnace };
+
+            if (CurrentTokenIs(Token.Dot))
+            {
+                if (!ExpectPeek(Token.Identifier))
+                {
+                    // TODO : raise error
+                    return null;
+                }
+
+                instance_get_expression.Index = new StringLiteral { Data = CurrentTokenData };
+                
+                return instance_get_expression;
+            }
+
+            if (CurrentTokenIs(Token.LeftBracket))
+            {
+                NextToken();
+                instance_get_expression.Index = ParseExpression();
+                
+                if (!ExpectPeek(Token.RightBracket))
+                {
+                    // TODO : raise error
+                    return null;
+                }
+
+                return instance_get_expression;
+            }
+
+            // TODO : raise error
+            return null;
         }
 
         private Expression ParseReturnExpression()
         {
-            ReturnExpression return_expression = new ReturnExpression();
+            ReturnExpression return_expression = new ReturnExpression { Data = CurrentTokenData };
 
             if (PeekTokenData.Line == CurrentTokenData.Line)
             {

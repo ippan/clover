@@ -263,6 +263,7 @@ namespace Clover.Ast
 
     public class ReturnExpression : Expression
     {
+        public TokenData Data;
         public Expression Value;
         
         public override string ToString()
@@ -281,6 +282,20 @@ namespace Clover.Ast
         }
     }
 
-    
-    
+    public class InstanceGetExpression : Expression
+    {
+        public Expression Instance;
+        public Expression Index;
+
+        public override string ToString()
+        {
+            return $"{Instance}[{Index}]";
+        }
+
+        public override string Dump()
+        {
+            return $"{GetType().Name}[{Instance.Dump()}[{Index.Dump()}]]";
+        }
+    }
+
 }

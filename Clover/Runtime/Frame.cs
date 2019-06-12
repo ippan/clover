@@ -7,17 +7,15 @@ namespace Clover.Runtime
     {
         public ScriptFunction Function;
         public Int32 InstructionPointer = 0;
-        public Int32 BasePointer;
 
-        public Object[] local_variables;
+        public Int32[] local_variable_indices;
         
         public Object LastPop;
         
-        public Frame(ScriptFunction function, Int32 base_pointer, Int32 local_variable_count)
+        public Frame(ScriptFunction function, Int32 local_variable_count)
         {
             Function = function;
-            BasePointer = base_pointer;
-            local_variables = new Object[local_variable_count];
+            local_variable_indices = new Int32[local_variable_count];
         }
 
         public Int32 CurrentInstruction => Function.Bytecode.Instructions[InstructionPointer];
@@ -34,17 +32,18 @@ namespace Clover.Runtime
             InstructionPointer = value;
         }
 
-        public Object Set(int index, Object value)
+        public void SetVariableIndex(int index, Int32 target_index)
         {
-            local_variables[index] = value;
-            return value;
+            local_variable_indices[index] = target_index;
         }
 
-        public Object Get(int index)
+        public Int32 GetVariableIndex(int index)
         {
-            return local_variables[index];
+            return local_variable_indices[index];
         }
 
+        public Int32 LocalVariableCount => local_variable_indices.Length;
+        
         public TokenData LastToken => Function.Bytecode.TokenDatas[InstructionPointer - 1];
 
         public bool Finished => InstructionPointer >= Function.Bytecode.Instructions.Count;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Clover.Runtime
 {
@@ -28,16 +29,15 @@ namespace Clover.Runtime
         {
             throw new RuntimeError($"can not divide {GetClassName()} and {right.GetClassName()}");
         }
-
         
         public virtual String AsString()
         {
-            return new String { Value = string.Empty };
+            throw new RuntimeError($"can not convert {GetClassName()} to String");
         }
 
         public virtual Boolean AsBoolean()
         {
-            return Boolean.False;
+            throw new RuntimeError($"can not convert {GetClassName()} to Boolean");
         }
 
         public virtual Boolean Equal(Object right)
@@ -77,7 +77,32 @@ namespace Clover.Runtime
         {
             return Greater(right).Not();
         }
-        
+
+        public virtual Object InstanceGet(Object key)
+        {
+            if (!(key is String index))
+                return null;
+
+            switch (index.Value)
+            {
+                case "to_string":
+                    return new NativeFunction { Function = ScriptAsString, ParameterCount = 0 };
+                    break;
+            }
+
+            return null;
+        }
+
+        public virtual Object InstanceSet(Object key)
+        {
+            return null;
+        }
+
+        public virtual Object ScriptAsString(Object[] parameters)
+        {
+            return AsString();
+        }
+
         public virtual string GetClassName()
         {
             return "Object";

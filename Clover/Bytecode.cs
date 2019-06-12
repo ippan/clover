@@ -16,12 +16,17 @@ namespace Clover
         
         public const Int32 SetLocal = 0x000402;
         public const Int32 GetLocal = 0x000502;
+        
+        public const Int32 SetGlobal = 0x000601;
+        public const Int32 GetGlobal = 0x000701;
 
-        public const Int32 LoadFreeVariable = 0x000603;
-        public const Int32 SetFreeVariable = 0x000702;
-        public const Int32 GetFreeVariable = 0x000802;
+        public const Int32 InstanceGet = 0x000801;
+        public const Int32 InstanceSet = 0x000901;
+
+        public const Int32 InstanceGlobalGet = 0x000A01;
+        public const Int32 InstanceGlobalSet = 0x000B01;
         
-        
+
         public const Int32 Add = 0x010201;
         public const Int32 Sub = 0x010301;
         public const Int32 Multiply = 0x010401;

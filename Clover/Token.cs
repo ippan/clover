@@ -43,6 +43,8 @@ namespace Clover
         
         LeftParentheses,
         RightParentheses,
+        LeftBracket,
+        RightBracket,
         
         Comma,
         Dot,

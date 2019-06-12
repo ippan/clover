@@ -27,7 +27,7 @@ namespace Clover
             return Parent;
         }
 
-        public virtual bool IsGlobal => false;
+        public virtual bool IsTopLevel => false;
     }
 
     public class Symbol
@@ -83,7 +83,7 @@ namespace Clover
             return Parent;
         }
 
-        public override bool IsGlobal => Parent is FrameScope && Parent.IsGlobal;
+        public override bool IsTopLevel => Parent is FrameScope && Parent.IsTopLevel;
     }
 
     public class FrameScope : Scope
@@ -104,6 +104,12 @@ namespace Clover
 
         public int LocalVariableCount => local_variables.Count;
 
-        public override bool IsGlobal => Parent == null;
+        public override bool IsTopLevel => Parent == null;
     }
+
+    public class ClassScope : Scope
+    {
+        public override bool IsTopLevel => false;
+    }
+
 }

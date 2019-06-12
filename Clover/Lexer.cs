@@ -47,6 +47,8 @@ namespace Clover
             { "!", Token.Not },
             { "(", Token.LeftParentheses },
             { ")", Token.RightParentheses },
+            { "[", Token.LeftBracket },
+            { "]", Token.RightBracket },
             { ",", Token.Comma },
             { "&", Token.BitAnd },
             { "|", Token.BitOr },
@@ -162,8 +164,11 @@ namespace Clover
                 if (CurrentCharacter == '.')
                 {
                     if (token == Token.Float)
-                        return MakeTokenData(Token.Invalid, "Number can not contain more than one '.'");
+                        break;
 
+                    if (!IsNumber(PeekCharacter))
+                        break;
+                    
                     token = Token.Float;
                 }
                 
@@ -259,6 +264,11 @@ namespace Clover
         private Char CurrentCharacter
         {
             get { return Eof ? '\0' : source[current_position]; }
+        }
+
+        private Char PeekCharacter
+        {
+            get { return current_position + 1 >= source.Length ? '\0' : source[current_position + 1]; }
         }
 
         private bool Eof

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace Clover.Runtime
@@ -12,6 +13,16 @@ namespace Clover.Runtime
     public class ScriptFunction : Function
     {
         public Bytecode Bytecode;
+        public int ParameterCount;
+    }
+
+    
+    
+    public class NativeFunction : Function
+    {
+        public delegate Object NativeFunctionDefine(Object[] parameters);
+
+        public NativeFunctionDefine Function;
         public int ParameterCount;
     }
 
