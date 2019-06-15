@@ -81,16 +81,20 @@ namespace Clover.Runtime
         public virtual Object InstanceGet(Object key)
         {
             if (!(key is String index))
-                return null;
+                return Null.Instance;
 
-            switch (index.Value)
+            return InternalInstanceGet(index.Value);
+        }
+
+        protected virtual Object InternalInstanceGet(string key)
+        {
+            switch (key)
             {
                 case "to_string":
-                    return new NativeFunction { Function = ScriptAsString, ParameterCount = 0 };
-                    break;
+                    return new NativeFunction(ScriptAsString);
             }
 
-            return null;
+            return Null.Instance;
         }
 
         public virtual Object InstanceSet(Object key)

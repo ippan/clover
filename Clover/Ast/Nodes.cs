@@ -235,7 +235,7 @@ namespace Clover.Ast
     public class CallExpression : Expression
     {
         public Expression Function;
-        public List<Expression> Parameters = new List<Expression>();
+        public List<Expression> Parameters;
 
         public override string ToString()
         {
@@ -295,6 +295,34 @@ namespace Clover.Ast
         public override string Dump()
         {
             return $"{GetType().Name}[{Instance.Dump()}[{Index.Dump()}]]";
+        }
+    }
+
+    public class ArrayExpression : Expression
+    {
+        public List<Expression> Values;
+        
+        public override string ToString()
+        {
+            return $"[{String.Join(",", Values)}]";
+        }
+
+        public override string Dump()
+        {
+            StringBuilder builder = new StringBuilder();
+
+            bool first = true;
+
+            foreach (Expression parameter in Values)
+            {
+                if (!first)
+                    builder.Append(", ");
+                first = false;
+                
+                builder.Append(parameter.Dump());
+            }
+            
+            return $"[{GetType().Name}[{builder}]]";
         }
     }
 

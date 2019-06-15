@@ -1,1 +1,5 @@
-7.to_string()
+local a = [ 3, "test", 55 ]
+
+a.append(10)
+
+a[1]

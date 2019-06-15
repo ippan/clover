@@ -25,8 +25,9 @@ namespace Clover
 
         public const Int32 InstanceGlobalGet = 0x000A01;
         public const Int32 InstanceGlobalSet = 0x000B01;
-        
 
+        public const Int32 NewArray = 0x001002;
+        
         public const Int32 Add = 0x010201;
         public const Int32 Sub = 0x010301;
         public const Int32 Multiply = 0x010401;

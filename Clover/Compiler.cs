@@ -33,7 +33,21 @@ namespace Clover
             compiler_functions[typeof(CallExpression)] = CompileCallExpression;
             compiler_functions[typeof(ReturnExpression)] = CompileReturnExpression;
             compiler_functions[typeof(InstanceGetExpression)] = CompileInstanceGetExpression;
+            compiler_functions[typeof(ArrayExpression)] = CompileArrayExpression;
 
+        }
+
+        private bool CompileArrayExpression(Node node, Context context)
+        {
+            ArrayExpression array_expression = (ArrayExpression)node;
+
+            foreach (Expression value in array_expression.Values)
+                Compile(value, context);
+
+            context.Bytecode.Add(OpCode.NewArray);
+            context.Bytecode.Add(array_expression.Values.Count);
+            
+            return true;
         }
 
         private bool CompileInstanceGetExpression(Node node, Context context)

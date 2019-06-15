@@ -24,6 +24,12 @@ namespace Clover.Runtime
 
         public NativeFunctionDefine Function;
         public int ParameterCount;
+
+        public NativeFunction(NativeFunctionDefine function, int parameter_count = 0)
+        {
+            Function = function;
+            ParameterCount = parameter_count;
+        }
     }
 
     public class Closure : Function

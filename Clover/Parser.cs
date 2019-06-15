@@ -99,6 +99,7 @@ namespace Clover
             prefix_functions[Token.Local] = ParseLocalExpression;
             prefix_functions[Token.Function] = ParseFunctionExpression;
             prefix_functions[Token.Return] = ParseReturnExpression;
+            prefix_functions[Token.LeftBracket] = ParseArrayExpression;
 
             infix_functions[Token.Assign] = ParseInfixExpression;
             infix_functions[Token.PlusAssign] = ParseInfixExpression;
@@ -122,6 +123,53 @@ namespace Clover
             infix_functions[Token.Dot] = ParseInstanceGetExpression;
             infix_functions[Token.LeftBracket] = ParseInstanceGetExpression;
             infix_functions[Token.LeftParentheses] = ParseCallExpression;
+        }
+
+        private Expression ParseArrayExpression()
+        {
+            ArrayExpression array_expression = new ArrayExpression();
+            
+            NextToken();
+
+            array_expression.Values = ParseCommaExpressions(Token.RightBracket);
+            
+            return array_expression;
+        }
+
+        private List<Expression> ParseCommaExpressions(Token end_token)
+        {
+            List<Expression> expressions = new List<Expression>();
+            
+            bool last_is_comma = false;
+            
+            while (!(CurrentTokenIs(end_token) || CurrentTokenIs(Token.Eof)))
+            {
+                expressions.Add(ParseExpression());
+                
+                NextToken();
+                
+                if (CurrentTokenIs(Token.Comma))
+                {
+                    last_is_comma = true;
+                    NextToken();
+                }
+                else
+                {
+                    last_is_comma = false;
+                }
+            }
+
+            if (last_is_comma)
+            {
+                // TODO : raise error
+            }
+
+            if (!CurrentTokenIs(end_token))
+            {
+                // TODO : raise error
+            }
+            
+            return expressions;
         }
 
         private Expression ParseInstanceGetExpression(Expression instnace)
@@ -178,36 +226,8 @@ namespace Clover
 
             NextToken();
 
-            bool last_is_comma = false;
+            call_expression.Parameters = ParseCommaExpressions(Token.RightParentheses);
             
-            while (!(CurrentTokenIs(Token.RightParentheses) || CurrentTokenIs(Token.Eof)))
-            {
-                call_expression.Parameters.Add(ParseExpression());
-                
-                NextToken();
-                
-                if (CurrentTokenIs(Token.Comma))
-                {
-                    last_is_comma = true;
-                    NextToken();
-                }
-                else
-                {
-                    last_is_comma = false;
-                }
-
-            }
-
-            if (last_is_comma)
-            {
-                // TODO : raise error
-            }
-
-            if (!CurrentTokenIs(Token.RightParentheses))
-            {
-                // TODO : raise error
-            }
-
             return call_expression;
         }
 

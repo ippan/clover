@@ -280,6 +280,21 @@ namespace Clover.Runtime
                         break;
                     }
 
+                    case OpCode.NewArray:
+                    {
+                        int value_count = frame.CurrentInstruction;
+                        frame.MoveInstructionPointer(1);
+
+                        List<Object> values = new List<Object>();
+                        for (int i = 0; i < value_count; i += 1)
+                            values.Add(PopStack());
+                        
+                        values.Reverse();
+                        
+                        PushStack(new Array(values));
+                        break;
+                    }
+
                     case OpCode.InstanceGet:
                     case OpCode.InstanceSet:
                     case OpCode.InstanceGlobalGet:
