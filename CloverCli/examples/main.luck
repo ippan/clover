@@ -15,3 +15,7 @@ b["hell"] = "kkk"
 b.add("ggyy", "gooo")
 
 b["hell"]
+
+b.abc = 100
+
+b

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 
 namespace Clover.Runtime
 {
@@ -82,6 +83,22 @@ namespace Clover.Runtime
             }
 
             return base.InstanceSet(key, value);
+        }
+        
+        public override string Inspect()
+        {
+            StringBuilder builder = new StringBuilder();
+
+            builder.AppendLine("{");
+            
+            foreach (KeyValuePair<string, Object> key_value in data)
+            {
+                builder.AppendLine($"{key_value.Key}: {key_value.Value.Inspect()}");
+            }
+
+            builder.AppendLine("}");
+
+            return builder.ToString();
         }
     }
 }
