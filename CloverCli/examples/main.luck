@@ -10,8 +10,8 @@ local b =
   ok: "test"
 }
 
-b["hello"]
+b["hell"] = "kkk"
 
 b.add("ggyy", "gooo")
 
-b["ggyy"]
+b["hell"]

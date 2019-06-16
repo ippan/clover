@@ -97,7 +97,7 @@ namespace Clover.Runtime
             return Null.Instance;
         }
 
-        public virtual Object InstanceSet(Object key)
+        public virtual Object InstanceSet(Object key, Object value)
         {
             return null;
         }

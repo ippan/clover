@@ -347,6 +347,26 @@ namespace Clover.Runtime
                             case OpCode.InstanceSet:
                             case OpCode.InstanceGlobalSet:
                             {
+                                Object value = PopStack();
+
+                                Object return_value = instance.InstanceSet(index, value);
+
+                                if (return_value == null && operation_code == OpCode.InstanceGlobalSet && index is String global_key)
+                                {
+                                    if (globals.ContainsKey(global_key.Value))
+                                    {
+                                        globals[global_key.Value] = value;
+                                        return_value = value;
+                                    }
+                                }
+
+                                if (return_value == null)
+                                {
+                                    // TODO : raise error
+                                }
+
+                                PushStack(return_value);
+                                
                                 break;
                             }
 

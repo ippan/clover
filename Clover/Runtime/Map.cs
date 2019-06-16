@@ -72,5 +72,16 @@ namespace Clover.Runtime
             
             return base.InternalInstanceGet(key);
         }
+
+        public override Object InstanceSet(Object key, Object value)
+        {
+            if (key is String index)
+            {
+                data[index.Value] = value;
+                return value;
+            }
+
+            return base.InstanceSet(key, value);
+        }
     }
 }

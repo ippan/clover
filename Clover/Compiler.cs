@@ -74,6 +74,17 @@ namespace Clover
             return true;
         }
 
+        private bool CompileInstanceSetExpression(Node node, Context context)
+        {
+            InstanceGetExpression instance_get_expression = (InstanceGetExpression)node;
+            Compile(instance_get_expression.Instance, context);
+            Compile(instance_get_expression.Index, context);
+            context.Bytecode.Add(OpCode.InstanceSet);
+
+            return true;
+        }
+
+        
         private bool CompileReturnExpression(Node node, Context context)
         {
             ReturnExpression return_expression = (ReturnExpression)node;
@@ -346,9 +357,14 @@ namespace Clover
         {
             Compile(node.Right, context);
 
+            if (node.Left is InstanceGetExpression)
+            {
+                return CompileInstanceSetExpression(node.Left, context);
+            }
+
             if (!(node.Left is Identifier))
             {
-                // TODO : expression
+                // TODO : raise error
                 return false;
             }
 
