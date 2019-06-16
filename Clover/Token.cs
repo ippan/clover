@@ -6,7 +6,7 @@ namespace Clover
     {
         Invalid,
         Eof,
-        Empty,
+        None,
         
         Identifier,
         String,
@@ -45,8 +45,11 @@ namespace Clover
         RightParentheses,
         LeftBracket,
         RightBracket,
+        LeftBrace,
+        RightBrace,
         
         Comma,
+        Colon,
         Dot,
         
         End,

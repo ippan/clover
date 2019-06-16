@@ -295,6 +295,25 @@ namespace Clover.Runtime
                         break;
                     }
 
+                    case OpCode.NewMap:
+                    {
+                        int key_value_count = frame.CurrentInstruction;
+                        frame.MoveInstructionPointer(1);
+                        
+                        Dictionary<string, Object> key_values = new Dictionary<string, Object>();
+
+                        for (int i = 0; i < key_value_count; i += 1)
+                        {
+                            Object value = PopStack();
+                            String key = (String)PopStack();
+                            key_values[key.Value] = value;
+                        }
+
+                        PushStack(new Map(key_values));
+                        
+                        break;
+                    }
+
                     case OpCode.InstanceGet:
                     case OpCode.InstanceSet:
                     case OpCode.InstanceGlobalGet:

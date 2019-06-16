@@ -129,7 +129,7 @@ namespace Clover.Ast
 
     public class FunctionExpression : Expression
     {
-        public List<LocalExpression> Parameters = new List<LocalExpression>();
+        public List<LocalExpression> Parameters;
         public Program Body;
         
         public override string ToString()
@@ -323,6 +323,33 @@ namespace Clover.Ast
             }
             
             return $"[{GetType().Name}[{builder}]]";
+        }
+    }
+
+    public class MapExpression : Expression
+    {
+        public List<LocalExpression> KeyValues;
+        
+        public override string ToString()
+        {
+            StringBuilder builder = new StringBuilder();
+
+            builder.Append("{\n");
+            
+            foreach (LocalExpression parameter in KeyValues)
+            {
+                builder.AppendLine($"{parameter.Identifier}: {parameter.Value}");
+            }
+
+            builder.AppendLine("}");
+            
+            return builder.ToString();
+        }
+        
+        public override string Dump()
+        {
+            // TODO : implement dump
+            return "";
         }
     }
 

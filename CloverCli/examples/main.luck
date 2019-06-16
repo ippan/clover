@@ -3,3 +3,15 @@ local a = [ 3, "test", 55 ]
 a.append(10)
 
 a[1]
+
+local b =
+{
+  hello: 987
+  ok: "test"
+}
+
+b["hello"]
+
+b.add("ggyy", "gooo")
+
+b["ggyy"]

@@ -100,6 +100,7 @@ namespace Clover
             prefix_functions[Token.Function] = ParseFunctionExpression;
             prefix_functions[Token.Return] = ParseReturnExpression;
             prefix_functions[Token.LeftBracket] = ParseArrayExpression;
+            prefix_functions[Token.LeftBrace] = ParseMapExpression;
 
             infix_functions[Token.Assign] = ParseInfixExpression;
             infix_functions[Token.PlusAssign] = ParseInfixExpression;
@@ -123,6 +124,17 @@ namespace Clover
             infix_functions[Token.Dot] = ParseInstanceGetExpression;
             infix_functions[Token.LeftBracket] = ParseInstanceGetExpression;
             infix_functions[Token.LeftParentheses] = ParseCallExpression;
+        }
+
+        private Expression ParseMapExpression()
+        {
+            MapExpression map_expression = new MapExpression();
+            
+            NextToken();
+
+            map_expression.KeyValues = ParseKeyValues(Token.RightBrace, Token.Colon, Token.None, true);
+
+            return map_expression;
         }
 
         private Expression ParseArrayExpression()
@@ -482,14 +494,19 @@ namespace Clover
             return if_expression;
         }
 
-        private List<LocalExpression> ParseParameters(Token terminator)
+        private List<LocalExpression> ParseKeyValues(Token terminator, Token assign, Token separator, bool must_have_value = false)
         {
             List<LocalExpression> parameters = new List<LocalExpression>();
 
-            bool last_is_comma = false;
-            
+            bool last_is_sperator = false;
+
             while (!(CurrentTokenIs(terminator) || CurrentTokenIs(Token.Eof)))
             {
+                if (parameters.Count > 0 && !last_is_sperator && separator != Token.None)
+                {
+                    // TODO : raise error
+                }
+
                 if (!CurrentTokenIs(Token.Identifier))
                 {
                     // TODO : raise error
@@ -499,27 +516,34 @@ namespace Clover
 
                 NextToken();
 
-                if (CurrentTokenIs(Token.Assign))
+                if (CurrentTokenIs(assign))
                 {
                     NextToken();
                     local_expression.Value = ParseExpression();
                     NextToken();
                 }
+                else if (must_have_value)
+                {
+                    // TODO : raise error
+                }
 
                 parameters.Add(local_expression);
                 
-                if (CurrentTokenIs(Token.Comma))
+                if (separator == Token.None)
+                    continue;
+
+                if (CurrentTokenIs(separator))
                 {
                     NextToken();
-                    last_is_comma = true;
+                    last_is_sperator = true;
                 }
                 else
                 {
-                    last_is_comma = false;
+                    last_is_sperator = false;
                 }
             }
 
-            if (last_is_comma)
+            if (last_is_sperator)
             {
                 // TODO : raise error
             }
@@ -538,7 +562,7 @@ namespace Clover
             
             FunctionExpression function_expression = new FunctionExpression();
 
-            function_expression.Parameters = ParseParameters(Token.RightParentheses);
+            function_expression.Parameters = ParseKeyValues(Token.RightParentheses, Token.Assign, Token.Comma, false);
             
             if (!CurrentTokenIs(Token.RightParentheses))
             {

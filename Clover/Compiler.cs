@@ -15,8 +15,6 @@ namespace Clover
         
         private Scope scope = null;
         
-        private TokenData last_token_data;
-
         public Compiler()
         {
             compiler_functions[typeof(Program)] = CompileProgram;
@@ -34,7 +32,23 @@ namespace Clover
             compiler_functions[typeof(ReturnExpression)] = CompileReturnExpression;
             compiler_functions[typeof(InstanceGetExpression)] = CompileInstanceGetExpression;
             compiler_functions[typeof(ArrayExpression)] = CompileArrayExpression;
+            compiler_functions[typeof(MapExpression)] = CompileMapExpression;
+        }
 
+        private bool CompileMapExpression(Node node, Context context)
+        {
+            MapExpression map_expression = (MapExpression)node;
+
+            foreach (LocalExpression local_expression in map_expression.KeyValues)
+            {
+                CompileStringLiteral(local_expression.Identifier.Data.Value, context, local_expression.Identifier.Data);
+                Compile(local_expression.Value, context);
+            }
+
+            context.Bytecode.Add(OpCode.NewMap);
+            context.Bytecode.Add(map_expression.KeyValues.Count);
+            
+            return true;
         }
 
         private bool CompileArrayExpression(Node node, Context context)
@@ -211,11 +225,9 @@ namespace Clover
 
             if (program.Expressions.Count == 0)
             {
-                context.Bytecode.Instructions.Add(OpCode.Null);
-                context.Bytecode.TokenDatas.Add(last_token_data);
+                context.Bytecode.Add(OpCode.Null);
                 
-                context.Bytecode.Instructions.Add(OpCode.Pop);
-                context.Bytecode.TokenDatas.Add(last_token_data);
+                context.Bytecode.Add(OpCode.Pop);
             }
             
             return true;
@@ -234,67 +246,58 @@ namespace Clover
 
         private bool CompileIntegerLiteral(Node node, Context context)
         {
-            context.Bytecode.Instructions.Add(OpCode.Constant);
-            context.Bytecode.Instructions.Add(AddConstant(new Integer { Value = ((IntegerLiteral)node).Value }, context));
+            IntegerLiteral integer_literal = (IntegerLiteral)node;
             
-            PushTokenData(((IntegerLiteral)node).Data, context.Bytecode);
-            PushTokenData(((IntegerLiteral)node).Data, context.Bytecode);
+            context.Bytecode.Add(OpCode.Constant, integer_literal.Data);
+            context.Bytecode.Add(AddConstant(new Integer { Value = integer_literal.Value }, context));
             
             return true;
         }
 
         private bool CompileFloatLiteral(Node node, Context context)
         {
+            FloatLiteral float_literal = (FloatLiteral)node;
+            
             Int32 index = context.Constants.Count;
             
-            context.Constants.Add(new Float { Value = ((FloatLiteral)node).Value });
+            context.Constants.Add(new Float { Value = float_literal.Value });
             
-            context.Bytecode.Instructions.Add(OpCode.Constant);
-            context.Bytecode.Instructions.Add(index);
+            context.Bytecode.Add(OpCode.Constant, float_literal.Data);
+            context.Bytecode.Add(index);
             
-            PushTokenData(((FloatLiteral)node).Data, context.Bytecode);
-            PushTokenData(((FloatLiteral)node).Data, context.Bytecode);
-
             return true;
         }
 
         private bool CompileBooleanLiteral(Node node, Context context)
         {
-            BooleanLiteral boolean_literal = node as BooleanLiteral;
+            BooleanLiteral boolean_literal = (BooleanLiteral)node;
 
-            context.Bytecode.Instructions.Add(boolean_literal.Value ? OpCode.True : OpCode.False);
-
-
-            PushTokenData(((BooleanLiteral)node).Data, context.Bytecode);
-
-            return true;
-        }
-
-        private void PushTokenData(TokenData token_data, Bytecode bytecode)
-        {
-            last_token_data = token_data;
+            context.Bytecode.Add(boolean_literal.Value ? OpCode.True : OpCode.False, boolean_literal.Data);
             
-            bytecode.TokenDatas.Add(last_token_data);
+            return true;
         }
 
         private bool CompileNullLiteral(Node node, Context context)
         {
-            context.Bytecode.Instructions.Add(OpCode.Null);
-            PushTokenData(((NullLiteral)node).Data, context.Bytecode);
+            context.Bytecode.Add(OpCode.Null, ((NullLiteral)node).Data);
             return true;
         }
 
         private bool CompileStringLiteral(Node node, Context context)
         {
+            TokenData token_data = ((StringLiteral)node).Data;
+            return CompileStringLiteral(token_data.Value, context, token_data);
+        }
+
+        private bool CompileStringLiteral(string value, Context context, TokenData? token_data = null)
+        {
             Int32 index = context.Constants.Count;
             
-            context.Constants.Add(new Runtime.String { Value = ((StringLiteral)node).Data.Value });
+            context.Constants.Add(new Runtime.String { Value = value });
             
-            context.Bytecode.Instructions.Add(OpCode.Constant);
-            context.Bytecode.Instructions.Add(index);
+            context.Bytecode.Add(OpCode.Constant, token_data);
+            context.Bytecode.Add(index);
             
-            PushTokenData(((StringLiteral)node).Data, context.Bytecode);
-            PushTokenData(((StringLiteral)node).Data, context.Bytecode);
             return true;
         }
 
@@ -307,7 +310,7 @@ namespace Clover
                 Compile(infix_expression.Left, context);
                 Compile(infix_expression.Right, context);
 
-                PushTokenData(infix_expression.Data, context.Bytecode);
+                context.Bytecode.TokenDatas.Add(infix_expression.Data);
             }
 
             switch (infix_expression.Data.Token)
@@ -378,12 +381,10 @@ namespace Clover
             PushScope();
             Compile(if_expression.Condition, context);
             
-            context.Bytecode.Instructions.Add(OpCode.JumpIf);
-            context.Bytecode.TokenDatas.Add(last_token_data);
+            context.Bytecode.Add(OpCode.JumpIf);
 
             Int32 jump_index = context.Bytecode.Instructions.Count;
-            context.Bytecode.Instructions.Add(0);
-            context.Bytecode.TokenDatas.Add(last_token_data);
+            context.Bytecode.Add(0);
 
             if (if_expression.FalsePart != null)
             {
@@ -393,11 +394,9 @@ namespace Clover
                 PopScope();
             }
 
-            context.Bytecode.Instructions.Add(OpCode.Jump);
-            context.Bytecode.TokenDatas.Add(last_token_data);
+            context.Bytecode.Add(OpCode.Jump);
             Int32 end_index = context.Bytecode.Instructions.Count;
-            context.Bytecode.Instructions.Add(0);
-            context.Bytecode.TokenDatas.Add(last_token_data);
+            context.Bytecode.Add(0);
             
             context.Bytecode.Instructions[jump_index] = context.Bytecode.Instructions.Count;
             
