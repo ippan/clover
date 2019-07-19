@@ -52,18 +52,29 @@ namespace Clover.Runtime
 
         public void AddReference(Int32 index)
         {
-            variable_reference[index] -= 1;
+            variable_reference[index] += 1;
         }
 
-        public void Free(Int32 index)
+        public void Release(Int32 index)
         {
             variable_reference[index] -= 1;
 
             if (variable_reference[index] > 0)
                 return;
 
+            Object variable = variables[index];
+            
             variables[index] = null;
             free_variable_indices.Push(index);
+
+            // TODO : release closure's free variable
+            /*
+            if (variable is Closure closure)
+            {
+                foreach (int variable_index in closure.FreeVariableIndices.Values)
+                    Release(variable_index);
+            }
+            */
         }
 
         public Object PopStack()
@@ -94,7 +105,9 @@ namespace Clover.Runtime
 
             Frame call_frame = new Frame(closure.Source, closure.Source.Bytecode.LocalVariableCount);
             frames.Push(call_frame);
-            for (int i = 0; i < closure.DefaultValues.Length; i += 1)
+            
+
+            for (int i = 0; i < closure.Source.Bytecode.LocalVariableCount; i += 1)
             {
                 if (i < parameter_count)
                 {
@@ -104,10 +117,19 @@ namespace Clover.Runtime
                 }
                 else
                 {
+                    if (closure.FreeVariableIndices.ContainsKey(i))
+                    {
+                        int variable_index = closure.FreeVariableIndices[i];
+                        call_frame.SetVariableIndex(i, variable_index);
+                        AddReference(variable_index);
+                        continue;
+                    }
+                    
                     call_frame.SetVariableIndex(i, Allocate());
                     Int32 index = call_frame.GetVariableIndex(i);
-                    variables[index] = closure.DefaultValues[i];
+                    variables[index] = i < closure.DefaultValues.Length ? closure.DefaultValues[i] : Null.Instance;
                 }
+                
             }
         }
 
@@ -238,6 +260,17 @@ namespace Clover.Runtime
                         Closure closure = new Closure((ScriptFunction)constants[frame.CurrentInstruction]);
                         frame.MoveInstructionPointer(1);
 
+                        Int32 free_variable_count = frame.CurrentInstruction;
+                        frame.MoveInstructionPointer(1);
+
+                        for (int i = 0; i < free_variable_count; i += 1)
+                        {
+                            Object index = PopStack();
+                            Object variable_index = PopStack();
+                            closure.FreeVariableIndices.Add((Int32)((Integer)index).Value, (Int32)((Integer)variable_index).Value);
+                            AddReference((Int32)((Integer)variable_index).Value);
+                        }
+
                         for (int i = closure.Source.ParameterCount - 1; i >= 0; i -= 1)
                         {
                             closure.DefaultValues[i] = PopStack();
@@ -270,12 +303,24 @@ namespace Clover.Runtime
                         break;
                     }
 
+                    case OpCode.FreeVariable:
+                    {
+                        int parent_index = frame.CurrentInstruction;
+                        int index = frame.NextInstruction;
+                        frame.MoveInstructionPointer(2);
+
+                        PushStack(new Integer { Value = frame.GetVariableIndex(parent_index) });
+                        PushStack(new Integer { Value = index });
+                            
+                        break;
+                    }
+                    
                     case OpCode.Return:
                     {
                         Frame function_frame = frames.Pop();
                         
                         for (int i = 0; i < function_frame.LocalVariableCount; i += 1)
-                            Free(function_frame.GetVariableIndex(i));
+                            Release(function_frame.GetVariableIndex(i));
                         
                         break;
                     }
@@ -310,6 +355,27 @@ namespace Clover.Runtime
                         }
 
                         PushStack(new Map(key_values));
+                        
+                        break;
+                    }
+
+                    case OpCode.NewClass:
+                    {
+                        int member_count = frame.CurrentInstruction;
+                        frame.MoveInstructionPointer(1);
+
+                        ScriptClass script_class = new ScriptClass();
+                        
+                        script_class.SetParent(PopStack());
+
+                        for (int i = 0; i < member_count; i += 1)
+                        {
+                            Object value = PopStack();
+                            String key = (String)PopStack();
+                            script_class.AddMember(key.Value, value);
+                        }
+
+                        PushStack(script_class);
                         
                         break;
                     }

@@ -10,7 +10,7 @@ namespace Clover
         
         public const Int32 Pop = 0x000101;
 
-        public const Int32 Closure = 0x000202;
+        public const Int32 Closure = 0x000203;
         public const Int32 Call = 0x000302;
         public const Int32 Return = 0x000401;
         
@@ -26,8 +26,11 @@ namespace Clover
         public const Int32 InstanceGlobalGet = 0x000A01;
         public const Int32 InstanceGlobalSet = 0x000B01;
 
+        public const Int32 FreeVariable = 0x000C03;
+
         public const Int32 NewArray = 0x001002;
         public const Int32 NewMap = 0x001102;
+        public const Int32 NewClass = 0x001202;
         
         public const Int32 Add = 0x010201;
         public const Int32 Sub = 0x010301;

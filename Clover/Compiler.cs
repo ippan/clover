@@ -33,6 +33,36 @@ namespace Clover
             compiler_functions[typeof(InstanceGetExpression)] = CompileInstanceGetExpression;
             compiler_functions[typeof(ArrayExpression)] = CompileArrayExpression;
             compiler_functions[typeof(MapExpression)] = CompileMapExpression;
+            compiler_functions[typeof(ClassExpression)] = CompileClassExpression;
+        }
+
+        private bool CompileClassExpression(Node node, Context context)
+        {
+            EnterClass();
+            
+            ClassExpression class_expression = (ClassExpression)node;
+
+            foreach (LocalExpression local_expression in class_expression.Members)
+            {
+                CompileStringLiteral(local_expression.Identifier.Data.Value, context, local_expression.Identifier.Data);
+                Compile(local_expression.Value, context);
+            }
+
+            if (class_expression.SuperClass != null)
+            {
+                Compile(class_expression.SuperClass, context);
+            }
+            else
+            {
+                context.Bytecode.Add(OpCode.Null);
+            }
+
+            ExitClass();
+            
+            context.Bytecode.Add(OpCode.NewClass);
+            context.Bytecode.Add(class_expression.Members.Count);
+            
+            return true;
         }
 
         private bool CompileMapExpression(Node node, Context context)
@@ -133,7 +163,7 @@ namespace Clover
 
             Bytecode bytecode = context.Bytecode;
             context.Bytecode = new Bytecode();
-            
+
             Compile(function_expression.Body, context);
 
             context.Bytecode.PopLast();
@@ -164,18 +194,37 @@ namespace Clover
                     context.Bytecode.Add(OpCode.Null);
                 }
             }
-            
+
+            foreach (FreeSymbol free_symbol in frame_scope.FreeVariables)
+            {
+                bytecode.Add(OpCode.FreeVariable);
+                bytecode.Add(free_symbol.ParentIndex);
+                bytecode.Add(free_symbol.Index);
+            }
+
             bytecode.Add(OpCode.Closure);
             bytecode.Add(index);
-            
+            bytecode.Add(frame_scope.FreeVariables.Count);
+
             return true;
         }
 
         private bool CompileIdentifier(Node node, Context context)
         {
             Identifier identifier = (Identifier)node;
+            
+            // local variable exists?
             Symbol symbol = scope.FindLocal(identifier.Data.Value);
+            
+            if (symbol == null)
+            {
+                // free variable exists?
+                Symbol outer_symbol = scope.FindOuter(identifier.Data.Value);
 
+                if (outer_symbol != null)
+                    symbol = scope.DefineFree(identifier.Data.Value, outer_symbol);
+            }
+            
             if (symbol != null)
             {
                 context.Bytecode.Add(OpCode.GetLocal, identifier.Data);
@@ -465,6 +514,20 @@ namespace Clover
             return frame_scope;
         }
 
+        private void EnterClass()
+        {
+            scope = new ClassScope { Parent = scope };
+        }
+
+        private ClassScope ExitClass()
+        {
+            ClassScope class_scope = scope as ClassScope;
+
+            scope = scope.Pop();
+
+            return class_scope;
+        }
+
         private void PushScope()
         {
             if (scope != null)
@@ -482,6 +545,27 @@ namespace Clover
         private void PopScope()
         {
             scope = scope.Pop();
+        }
+
+        private bool InsideMemberFunction()
+        {
+            FrameScope frame_scope = null;
+
+            Scope current_scope = scope;
+
+            while (frame_scope == null)
+            {
+                if (current_scope is FrameScope)
+                {
+                    frame_scope = (FrameScope)current_scope;
+                }
+                else
+                {
+                    current_scope = current_scope.Parent;
+                }
+            }
+
+            return frame_scope.Parent is ClassScope;
         }
 
     }

@@ -101,6 +101,7 @@ namespace Clover
             prefix_functions[Token.Return] = ParseReturnExpression;
             prefix_functions[Token.LeftBracket] = ParseArrayExpression;
             prefix_functions[Token.LeftBrace] = ParseMapExpression;
+            prefix_functions[Token.Class] = ParseClassExpression;
 
             infix_functions[Token.Assign] = ParseInfixExpression;
             infix_functions[Token.PlusAssign] = ParseInfixExpression;
@@ -124,6 +125,24 @@ namespace Clover
             infix_functions[Token.Dot] = ParseInstanceGetExpression;
             infix_functions[Token.LeftBracket] = ParseInstanceGetExpression;
             infix_functions[Token.LeftParentheses] = ParseCallExpression;
+        }
+
+        private Expression ParseClassExpression()
+        {
+            ClassExpression class_expression = new ClassExpression();
+
+            NextToken();
+
+            if (CurrentTokenIs(Token.Extends))
+            {
+                NextToken();
+                class_expression.SuperClass = ParseExpression();
+                NextToken();
+            }
+
+            class_expression.Members = ParseKeyValues(Token.End, Token.Assign, Token.None, false);
+
+            return class_expression;
         }
 
         private Expression ParseMapExpression()

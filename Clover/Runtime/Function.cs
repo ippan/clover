@@ -16,8 +16,6 @@ namespace Clover.Runtime
         public int ParameterCount;
     }
 
-    
-    
     public class NativeFunction : Function
     {
         public delegate Object NativeFunctionDefine(Object[] parameters);
@@ -39,11 +37,28 @@ namespace Clover.Runtime
             Source = source;
             DefaultValues = new Object[source.ParameterCount];
         }
+        
+        public Dictionary<Int32, Int32> FreeVariableIndices = new Dictionary<Int32, Int32>();
 
         public ScriptFunction Source;
 
         public Object[] DefaultValues;
 
+        private int reference_count = 0;
+
+        public int ReferenceCount => reference_count;
+
+        public int AddReference()
+        {
+            return ++reference_count;
+        }
+
+        public int RemoveReference()
+        {
+            return --reference_count;
+        }
+
+        
         public override string Inspect()
         {
             StringBuilder builder = new StringBuilder();
@@ -69,5 +84,12 @@ namespace Clover.Runtime
             
             return builder.ToString();
         }
+    }
+
+    public class MemberFunction : Function
+    {
+        public ScriptFunction Source;
+        public Object[] DefaultValues;
+        public Object Self;
     }
 }
