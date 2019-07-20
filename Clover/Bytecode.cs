@@ -14,19 +14,21 @@ namespace Clover
         public const Int32 Call = 0x000302;
         public const Int32 Return = 0x000401;
         
-        public const Int32 SetLocal = 0x000402;
-        public const Int32 GetLocal = 0x000502;
+        public const Int32 LocalSet = 0x000402;
+        public const Int32 LocalGet = 0x000502;
         
-        public const Int32 SetGlobal = 0x000601;
-        public const Int32 GetGlobal = 0x000701;
+        public const Int32 GlobalSet = 0x000601;
+        public const Int32 GlobalGet = 0x000701;
 
         public const Int32 InstanceGet = 0x000801;
         public const Int32 InstanceSet = 0x000901;
 
-        public const Int32 InstanceGlobalGet = 0x000A01;
-        public const Int32 InstanceGlobalSet = 0x000B01;
+        public const Int32 EnvironmentGet = 0x000A01;
+        public const Int32 EnvironmentSet = 0x000B01;
 
-        public const Int32 FreeVariable = 0x000C03;
+        public const Int32 BaseGet = 0x000C01;
+        
+        public const Int32 FreeVariable = 0x000F03;
 
         public const Int32 NewArray = 0x001002;
         public const Int32 NewMap = 0x001102;

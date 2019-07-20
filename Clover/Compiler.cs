@@ -34,6 +34,16 @@ namespace Clover
             compiler_functions[typeof(ArrayExpression)] = CompileArrayExpression;
             compiler_functions[typeof(MapExpression)] = CompileMapExpression;
             compiler_functions[typeof(ClassExpression)] = CompileClassExpression;
+            compiler_functions[typeof(BaseGetExpression)] = CompileBaseGetExpression;
+        }
+
+        private bool CompileBaseGetExpression(Node node, Context context)
+        {
+            BaseGetExpression base_get_expression = (BaseGetExpression)node;
+            Compile(base_get_expression.Index, context);
+            context.Bytecode.Add(OpCode.BaseGet, base_get_expression.Data);
+            
+            return true;
         }
 
         private bool CompileClassExpression(Node node, Context context)
@@ -48,6 +58,8 @@ namespace Clover
                 Compile(local_expression.Value, context);
             }
 
+            ExitClass();
+            
             if (class_expression.SuperClass != null)
             {
                 Compile(class_expression.SuperClass, context);
@@ -57,7 +69,7 @@ namespace Clover
                 context.Bytecode.Add(OpCode.Null);
             }
 
-            ExitClass();
+            
             
             context.Bytecode.Add(OpCode.NewClass);
             context.Bytecode.Add(class_expression.Members.Count);
@@ -227,7 +239,7 @@ namespace Clover
             
             if (symbol != null)
             {
-                context.Bytecode.Add(OpCode.GetLocal, identifier.Data);
+                context.Bytecode.Add(OpCode.LocalGet, identifier.Data);
                 context.Bytecode.Add(symbol.Index);
                 return true;
             }
@@ -236,8 +248,16 @@ namespace Clover
             context.Bytecode.Add(OpCode.Constant, identifier.Data);
             context.Bytecode.Add(index);
 
-            context.Bytecode.Add(OpCode.GetGlobal);
-            
+
+            if (InsideClass())
+            {
+                context.Bytecode.Add(OpCode.EnvironmentGet);
+            }
+            else
+            {
+                context.Bytecode.Add(OpCode.GlobalGet);
+            }
+
             return true;
         }
 
@@ -423,7 +443,7 @@ namespace Clover
 
             if (symbol != null)
             {
-                context.Bytecode.Add(OpCode.SetLocal, identifier.Data);
+                context.Bytecode.Add(OpCode.LocalSet, identifier.Data);
                 context.Bytecode.Add(symbol.Index);
                 return true;
             }
@@ -433,7 +453,37 @@ namespace Clover
                 Int32 index = AddConstant(new Runtime.String { Value = identifier.Data.Value }, context);
                 context.Bytecode.Add(OpCode.Constant, identifier.Data);
                 context.Bytecode.Add(index);
-                context.Bytecode.Add(OpCode.SetGlobal);
+                context.Bytecode.Add(OpCode.GlobalSet);
+            }
+            else if (InsideClass())
+            {
+                Int32 index = AddConstant(new Runtime.String { Value = identifier.Data.Value }, context);
+                context.Bytecode.Add(OpCode.Constant, identifier.Data);
+                context.Bytecode.Add(index);
+                context.Bytecode.Add(OpCode.EnvironmentSet);
+            }
+
+            return false;
+        }
+
+        private bool InsideClass()
+        {
+            Scope current_scope = scope;
+
+            int frame_scrope_count = 0;
+            
+            while (current_scope != null)
+            {
+                if (current_scope is ClassScope)
+                    return true;
+
+                if (current_scope is FrameScope)
+                    frame_scrope_count += 1;
+
+                if (frame_scrope_count > 1)
+                    return false;
+
+                current_scope = current_scope.Parent;
             }
 
             return false;
@@ -493,7 +543,7 @@ namespace Clover
                 context.Bytecode.TokenDatas.Add(local_expression.Identifier.Data);
             }
 
-            context.Bytecode.Add(OpCode.SetLocal, local_expression.Identifier.Data);
+            context.Bytecode.Add(OpCode.LocalSet, local_expression.Identifier.Data);
             context.Bytecode.Add(symbol.Index);
             
             return true;
@@ -545,27 +595,6 @@ namespace Clover
         private void PopScope()
         {
             scope = scope.Pop();
-        }
-
-        private bool InsideMemberFunction()
-        {
-            FrameScope frame_scope = null;
-
-            Scope current_scope = scope;
-
-            while (frame_scope == null)
-            {
-                if (current_scope is FrameScope)
-                {
-                    frame_scope = (FrameScope)current_scope;
-                }
-                else
-                {
-                    current_scope = current_scope.Parent;
-                }
-            }
-
-            return frame_scope.Parent is ClassScope;
         }
 
     }

@@ -11,6 +11,8 @@ namespace Clover.Runtime
         public Int32[] local_variable_indices;
         
         public Object LastPop;
+
+        public Object Self;
         
         public Frame(ScriptFunction function, Int32 local_variable_count)
         {

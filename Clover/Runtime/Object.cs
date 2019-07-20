@@ -99,10 +99,18 @@ namespace Clover.Runtime
 
         public virtual Object InstanceSet(Object key, Object value)
         {
+            if (key is String index)
+                return InternalInstanceSet(index.Value, value);
+            
             return null;
         }
 
-        public virtual Object ScriptAsString(Object[] parameters)
+        protected virtual Object InternalInstanceSet(string key, Object value)
+        {
+            return null;
+        }
+
+        public virtual Object ScriptAsString(Object[] parameters, VirtualMachine virtual_machine)
         {
             return AsString();
         }
@@ -110,6 +118,11 @@ namespace Clover.Runtime
         public virtual string GetClassName()
         {
             return "Object";
+        }
+
+        public virtual Object Clone()
+        {
+            return this;
         }
     }
 }

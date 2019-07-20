@@ -12,6 +12,16 @@ namespace Clover.Runtime
             data = new_data;
         }
 
+        public override Object Clone()
+        {
+            Dictionary<string, Object> clone_data = new Dictionary<string, Object>(data.Count);
+            
+            foreach (KeyValuePair<string, Object> value in data)
+                clone_data.Add(value.Key, value.Value.Clone());
+            
+            return new Map(clone_data);
+        }
+
         public override Object InstanceGet(Object key)
         {
             if (key is String index)
@@ -23,7 +33,7 @@ namespace Clover.Runtime
             return base.InstanceGet(key);
         }
 
-        public Object Add(Object[] parameters)
+        public Object Add(Object[] parameters, VirtualMachine virtual_machine)
         {
             Object key = parameters[0];
             Object value = parameters[1];
@@ -38,7 +48,7 @@ namespace Clover.Runtime
             return null;
         }
 
-        public Object Remove(Object[] parameters)
+        public Object Remove(Object[] parameters, VirtualMachine virtual_machine)
         {
             Object key = parameters[0];
             

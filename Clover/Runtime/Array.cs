@@ -12,6 +12,16 @@ namespace Clover.Runtime
             data = new_data;
         }
 
+        public override Object Clone()
+        {
+            List<Object> clone_data = new List<Object>(data.Count);
+            
+            foreach (Object value in data)
+                clone_data.Add(value.Clone());
+            
+            return new Array(clone_data);
+        }
+
         public override Object InstanceGet(Object key)
         {
             if (key is Integer index)
@@ -25,14 +35,14 @@ namespace Clover.Runtime
             return base.InstanceGet(key);
         }
 
-        public Object Append(Object[] parameters)
+        public Object Append(Object[] parameters, VirtualMachine virtual_machine)
         {
             Object value = parameters[0];
             data.Add(value);
             return value;
         }
 
-        public Object Remove(Object[] parameters)
+        public Object Remove(Object[] parameters, VirtualMachine virtual_machine)
         {
             Integer index = (Integer)parameters[0];
             
@@ -98,5 +108,7 @@ namespace Clover.Runtime
 
             return builder.ToString();
         }
+        
+        
     }
 }

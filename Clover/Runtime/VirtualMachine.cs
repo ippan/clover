@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Runtime.CompilerServices;
 
 namespace Clover.Runtime
 {
@@ -67,7 +65,7 @@ namespace Clover.Runtime
             variables[index] = null;
             free_variable_indices.Push(index);
 
-            // TODO : release closure's free variable
+            // TODO : release closure's free variable, otherwise will have a memory leak
             /*
             if (variable is Closure closure)
             {
@@ -96,7 +94,7 @@ namespace Clover.Runtime
             return frames.Peek().LastPop;
         }
 
-        private void CallClosure(Closure closure, int parameter_count)
+        public void CallClosure(Closure closure, Object Self, int parameter_count)
         {
             if (closure.DefaultValues.Length < parameter_count)
             {
@@ -104,6 +102,7 @@ namespace Clover.Runtime
             }
 
             Frame call_frame = new Frame(closure.Source, closure.Source.Bytecode.LocalVariableCount);
+            call_frame.Self = Self;
             frames.Push(call_frame);
             
 
@@ -147,7 +146,20 @@ namespace Clover.Runtime
                 parameters[i] = PopStack();
             }
 
-            PushStack(native.Function(parameters));
+            PushStack(native.Function(parameters, this));
+        }
+
+        public void RunOneFrame()
+        {
+            int frame_count = frames.Count;
+
+            if (frame_count < 2)
+            {
+                // TODO : raise error
+            }
+
+            while (frame_count <= frames.Count)
+                Step();
         }
 
         public void Step()
@@ -223,7 +235,7 @@ namespace Clover.Runtime
                         break;
                     }
 
-                    case OpCode.SetLocal:
+                    case OpCode.LocalSet:
                     {
                         
                         Int32 index = frame.GetVariableIndex(frame.CurrentInstruction);
@@ -232,7 +244,7 @@ namespace Clover.Runtime
                         break;
                     }
 
-                    case OpCode.GetLocal:
+                    case OpCode.LocalGet:
                     {
                         Int32 index = frame.GetVariableIndex(frame.CurrentInstruction);
                         PushStack(variables[index]);
@@ -240,14 +252,14 @@ namespace Clover.Runtime
                         break;
                     }
 
-                    case OpCode.SetGlobal:
+                    case OpCode.GlobalSet:
                     {
                         String global_name = (String)PopStack();
                         globals[global_name.Value] = stack.Peek();
                         break;
                     }
 
-                    case OpCode.GetGlobal:
+                    case OpCode.GlobalGet:
                     {
                         String global_name = (String)PopStack();
                         PushStack(globals[global_name.Value]);
@@ -289,11 +301,15 @@ namespace Clover.Runtime
 
                         if (function is Closure closure)
                         {
-                            CallClosure(closure, parameter_count);
+                            CallClosure(closure, Null.Instance, parameter_count);
                         }
                         else if (function is NativeFunction native)
                         {
                             CallNative(native, parameter_count);
+                        }
+                        else if (function is MemberFunction member_function)
+                        {
+                            CallClosure(member_function.Source, member_function.Self, parameter_count);
                         }
                         else
                         {
@@ -365,8 +381,11 @@ namespace Clover.Runtime
                         frame.MoveInstructionPointer(1);
 
                         ScriptClass script_class = new ScriptClass();
+
+                        Object parent = PopStack();
                         
-                        script_class.SetParent(PopStack());
+                        if (parent != Null.Instance)
+                            script_class.Parent = (ScriptClass)parent;
 
                         for (int i = 0; i < member_count; i += 1)
                         {
@@ -380,10 +399,82 @@ namespace Clover.Runtime
                         break;
                     }
 
+                    case OpCode.EnvironmentGet:
+                    {
+                        Object index = PopStack();
+                        Object environment_value = null;
+
+                        if (frame.Self != null)
+                            environment_value = frame.Self.InstanceGet(index);
+
+                        if (environment_value == null && index is String global_key)
+                        {
+                            if (globals.ContainsKey(global_key.Value))
+                                environment_value = globals[global_key.Value];
+                        }
+
+                        if (environment_value == null)
+                        {
+                            // TODO : raise error
+                        }
+
+                        PushStack(environment_value);
+                        
+                        break;
+                    }
+
+                    case OpCode.EnvironmentSet:
+                    {
+                        Object index = PopStack();
+                        Object value = PopStack();
+                        Object environment_value = null;
+
+                        if (frame.Self != null)
+                            environment_value = frame.Self.InstanceSet(index, value);
+
+                        if (environment_value == null && index is String global_key)
+                        {
+                            if (globals.ContainsKey(global_key.Value))
+                            {
+                                globals[global_key.Value] = value;
+                                environment_value = value;
+                            }
+                        }
+
+                        if (environment_value == null)
+                        {
+                            // TODO : raise error
+                        }
+
+                        PushStack(environment_value);
+                        
+                        break;
+                    }
+
+                    case OpCode.BaseGet:
+                    {
+                        Object index = PopStack();
+
+                        if (!(frame.Self is ScriptClassInstance script_class_instance))
+                        {
+                            // TODO : raise error
+                            break;
+                        }
+
+                        Object value = script_class_instance.BaseGet(index);
+
+                        if (value == null)
+                        {
+                            // TODO : raise error
+                        }
+
+                        PushStack(value);
+                        
+                        break;
+                    }
+
                     case OpCode.InstanceGet:
                     case OpCode.InstanceSet:
-                    case OpCode.InstanceGlobalGet:
-                    case OpCode.InstanceGlobalSet:
                     {
                         Object index = PopStack();
                         Object instance = PopStack();
@@ -391,15 +482,8 @@ namespace Clover.Runtime
                         switch (operation_code)
                         {
                             case OpCode.InstanceGet:
-                            case OpCode.InstanceGlobalGet:    
                             {
                                 Object instance_value = instance.InstanceGet(index);
-
-                                if (instance_value == null && operation_code == OpCode.InstanceGlobalGet && index is String global_key)
-                                {
-                                    if (globals.ContainsKey(global_key.Value))
-                                        instance_value = globals[global_key.Value];
-                                }
 
                                 if (instance_value == null)
                                 {
@@ -411,20 +495,10 @@ namespace Clover.Runtime
                             }
 
                             case OpCode.InstanceSet:
-                            case OpCode.InstanceGlobalSet:
                             {
                                 Object value = PopStack();
 
                                 Object return_value = instance.InstanceSet(index, value);
-
-                                if (return_value == null && operation_code == OpCode.InstanceGlobalSet && index is String global_key)
-                                {
-                                    if (globals.ContainsKey(global_key.Value))
-                                    {
-                                        globals[global_key.Value] = value;
-                                        return_value = value;
-                                    }
-                                }
 
                                 if (return_value == null)
                                 {

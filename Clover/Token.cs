@@ -61,7 +61,6 @@ namespace Clover
         New,
         Base,
         This,
-        Constructor,
         At,
         
         If,

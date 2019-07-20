@@ -381,4 +381,16 @@ namespace Clover.Ast
             return builder.ToString();
         }
     }
+
+    public class BaseGetExpression : Expression
+    {
+        public TokenData Data;
+        public Expression Index;
+        
+        public override string ToString()
+        {
+            return $"base.{Index}";
+        }
+
+    }
 }

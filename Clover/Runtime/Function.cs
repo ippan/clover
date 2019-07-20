@@ -18,7 +18,7 @@ namespace Clover.Runtime
 
     public class NativeFunction : Function
     {
-        public delegate Object NativeFunctionDefine(Object[] parameters);
+        public delegate Object NativeFunctionDefine(Object[] parameters, VirtualMachine virtual_machine);
 
         public NativeFunctionDefine Function;
         public int ParameterCount;
@@ -43,21 +43,6 @@ namespace Clover.Runtime
         public ScriptFunction Source;
 
         public Object[] DefaultValues;
-
-        private int reference_count = 0;
-
-        public int ReferenceCount => reference_count;
-
-        public int AddReference()
-        {
-            return ++reference_count;
-        }
-
-        public int RemoveReference()
-        {
-            return --reference_count;
-        }
-
         
         public override string Inspect()
         {
@@ -88,8 +73,7 @@ namespace Clover.Runtime
 
     public class MemberFunction : Function
     {
-        public ScriptFunction Source;
-        public Object[] DefaultValues;
+        public Closure Source;
         public Object Self;
     }
 }

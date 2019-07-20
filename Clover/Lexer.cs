@@ -33,7 +33,6 @@ namespace Clover
             { "while", Token.While },
             { "base", Token.Base },
             { "this", Token.This },
-            { "constructor", Token.Constructor },
             { "load", Token.Load }
         };
 
