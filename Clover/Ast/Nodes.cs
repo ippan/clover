@@ -389,7 +389,7 @@ namespace Clover.Ast
         
         public override string ToString()
         {
-            return $"base.{Index}";
+            return $"base.{((StringLiteral)Index).Data.Value}";
         }
 
     }

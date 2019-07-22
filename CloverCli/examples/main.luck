@@ -1,21 +1,28 @@
-local a = [ 3, "test", 55 ]
+local MyClass = class
+  hi = 5
 
-a.append(10)
+  constructor = function()
+    hi = 6
+  end
 
-a[1]
+  hello = function()
+    10 + hi
+  end
 
-local b =
-{
-  hello: 987
-  ok: "test"
-}
+end
 
-b["hell"] = "kkk"
+local MyPowerClass = class extends MyClass
 
-b.add("ggyy", "gooo")
+  hello = function(one, two = 11)
+    hi * 100 + one * two + base.hello()
+  end
 
-b["hell"]
+end
 
-b.abc = 100
+local b = MyPowerClass.new()
 
-b
+print = std.print
+
+print("test")
+
+b.hello(12)

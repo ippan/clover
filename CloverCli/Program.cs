@@ -27,7 +27,8 @@ namespace CloverCli
                 Compiler compiler = new Compiler();
                 Context context = compiler.Compile(node);
 
-                VirtualMachine virtual_machine = new VirtualMachine(context); 
+                VirtualMachine virtual_machine = new VirtualMachine(context);
+                CloverStdlib.Stdlib.Apply(virtual_machine);
                 Clover.Runtime.Object result = virtual_machine.Run();
                 
                 Console.WriteLine(result.Inspect());
@@ -41,14 +42,11 @@ namespace CloverCli
                 Parser parser = new Parser();
                 Node node = parser.Parse(args[0]);
                 
-                Console.WriteLine(node.ToString());
-                
                 Compiler compiler = new Compiler();
                 Context context = compiler.Compile(node);
                 
-                Console.WriteLine(context.Bytecode.Dump());
-                
-                VirtualMachine virtual_machine = new VirtualMachine(context); 
+                VirtualMachine virtual_machine = new VirtualMachine(context);
+                CloverStdlib.Stdlib.Apply(virtual_machine);
                 Clover.Runtime.Object result = virtual_machine.Run();
                 
                 Console.WriteLine(result.Inspect());

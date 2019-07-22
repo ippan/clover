@@ -1,12 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp2.2</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\CloverStdlib\CloverStdlib.csproj" />
       <ProjectReference Include="..\Clover\Clover.csproj" />
     </ItemGroup>
 

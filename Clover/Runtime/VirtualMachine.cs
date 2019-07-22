@@ -134,7 +134,7 @@ namespace Clover.Runtime
 
         private void CallNative(NativeFunction native, int parameter_count)
         {
-            if (parameter_count > native.ParameterCount)
+            if (parameter_count > native.ParameterCount && native.ParameterCount != -1)
             {
                 // TODO : raise error
             }
@@ -526,5 +526,9 @@ namespace Clover.Runtime
             
         }
 
+        public void AddGlobal(string key, Object value)
+        {
+            globals.Add(key, value);
+        }
     }
 }
