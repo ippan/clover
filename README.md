@@ -1,10 +1,10 @@
 # Clover
 
-a toy object-oriented language created in C#~
+a toy object-oriented language created in Rust
 
 still in development~
 
-#### C# version is under development, some feature have not implemented. If you want to find the CoffeeScript version, go to https://github.com/ippan/clover/tree/coffee
+#### Rust version is under development, some feature have not implemented. If you want to find the C# version, go to https://github.com/ippan/clover/tree/csharp
 
 ### features
 * bytecode

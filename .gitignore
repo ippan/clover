@@ -1,5 +1,2 @@
 .idea
-.DS_Store
-obj/
-bin/
-*.sln.DotSettings.user
+target/
