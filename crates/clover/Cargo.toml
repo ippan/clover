@@ -1,8 +1,13 @@
 [package]
 name = "clover"
-version = "0.1.0"
-authors = ["PanPan <ippan829@gmail.com>"]
+version = "0.0.1"
+authors = [ "PanPan <ippan829@gmail.com>" ]
+license = "MIT"
 edition = "2018"
+repository = "https://github.com/ippan/clover"
+keywords = [ "language", "scripting" ]
+readme = "README.md"
+description = "A scripting language."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

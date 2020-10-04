@@ -1,13 +1,9 @@
-use clover::parser::lexer::Lexer;
-use clover::ast::token::Token;
+use clover::parser::Parser;
 
 fn main() {
-    let mut lexer = Lexer::new("local a = 1\nlocal b = a + 1");
+    let mut parser = Parser::new();
 
-    let mut token_data = lexer.lex();
+    let program = parser.parse("local a".to_string(), "main".to_string());
 
-    while token_data.token != Token::Eof {
-        println!("{:?}", token_data.token);
-        token_data = lexer.lex();
-    }
+    println!("{:?}", program);
 }

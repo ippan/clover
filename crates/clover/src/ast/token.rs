@@ -66,6 +66,7 @@ pub enum Token {
     Load
 }
 
+#[derive(Debug, Clone)]
 pub struct TokenData {
     pub token: Token,
     pub line: u16
