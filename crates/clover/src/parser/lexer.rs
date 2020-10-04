@@ -23,7 +23,7 @@ impl Lexer {
     pub fn new(source: &str) -> Lexer {
         Lexer {
             source: source.chars().collect(),
-            line: 0,
+            line: 1,
             position: 0
         }
     }
