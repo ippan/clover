@@ -1,7 +1,7 @@
 mod lexer;
 
 use crate::ast::token::{TokenData, Token};
-use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData};
+use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData};
 use crate::parser::lexer::Lexer;
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -92,12 +92,38 @@ impl Parser {
         }
     }
 
+    fn current_token_is_any_of(&self, tokens: &[Token]) -> bool {
+        for token in tokens {
+            if token.clone() == self.current_token_data.token {
+                return true;
+            }
+        };
+
+        false
+    }
+
+    fn expect_token(&self, token: &Token) -> Result<(), ParseError> {
+        if std::mem::discriminant(&self.current_token_data.token) == std::mem::discriminant(token) {
+            Ok(())
+        } else {
+            parse_error!(self.current_token_data, format!("Unexpect token [{:?}] (expect [{:?}])", self.current_token_data.token, token))
+        }
+    }
+
+    fn parse_codes(&mut self, stop_tokens: &[Token]) -> Result<Codes, ParseError> {
+        let mut codes = Codes::new();
+
+        while self.current_token_data.token != Token::Eof && !self.current_token_is_any_of(stop_tokens) {
+            codes.push(self.parse_statement()?);
+        }
+
+        Ok(codes)
+    }
+
     fn parse_program(&mut self, filename: String) -> Result<Program, ParseError> {
         let mut program = Program::new(filename);
 
-        while self.current_token_data.token != Token::Eof {
-            program.codes.push(self.parse_statement()?);
-        }
+        program.codes = self.parse_codes(&[])?;
 
         Ok(program)
     }
@@ -115,11 +141,9 @@ impl Parser {
 
         let identifier = self.current_token_data.clone();
 
-        if let Token::Identifier(_) = identifier.token {
-            self.next_token();
-        } else {
-            return parse_error!(identifier, "Not implement yet");
-        };
+        self.expect_token(&Token::Identifier("".to_string()))?;
+
+        self.next_token();
 
         let mut expression = None;
 
@@ -164,22 +188,33 @@ impl Parser {
     }
 
     fn parse_identifier_expression(&mut self) -> Result<Expression, ParseError> {
+        self.expect_token(&Token::Identifier("".to_string()))?;
+
         let identifier = self.current_token_data.clone();
-        if let Token::Identifier(_) = identifier.token {
-            self.next_token();
-            Ok(Expression::Identifier(Box::new(IdentifierExpressionData { data: identifier })))
-        } else {
-            parse_error!(self.current_token_data, "Unexpect token (expect Identifier)")
-        }
+        self.next_token();
+        Ok(Expression::Identifier(Box::new(IdentifierExpressionData { data: identifier })))
     }
 
     fn parse_integer_expression(&mut self) -> Result<Expression, ParseError> {
+        self.expect_token(&Token::Integer(0))?;
         let integer = self.current_token_data.clone();
-        if let Token::Integer(_) = integer.token {
-            self.next_token();
-            Ok(Expression::IntegerLiteral(Box::new(IntegerLiteralExpressionData { data: integer })))
-        } else {
-            parse_error!(self.current_token_data, "Unexpect token (expect Identifier)")
+        self.next_token();
+        Ok(Expression::IntegerLiteral(Box::new(IntegerLiteralExpressionData { data: integer })))
+    }
+
+    fn parse_float_expression(&mut self) -> Result<Expression, ParseError> {
+        self.expect_token(&Token::Float(0.0))?;
+        let float = self.current_token_data.clone();
+        self.next_token();
+        Ok(Expression::FloatLiteral(Box::new(FloatLiteralExpressionData { data: float })))
+    }
+
+    fn parse_boolean_expression(&mut self) -> Result<Expression, ParseError> {
+        let boolean = self.current_token_data.clone();
+
+        match boolean.token {
+            Token::True | Token::False => Ok(Expression::BooleanLiteral(Box::new(BooleanLiteralExpressionData { data: boolean }))),
+            _ => parse_error!(self.current_token_data, "Unexpect token (expect boolean)")
         }
     }
 
@@ -205,12 +240,137 @@ impl Parser {
         }
     }
 
+    fn parse_group_expression(&mut self) -> Result<Expression, ParseError> {
+        self.expect_token(&Token::LeftParentheses)?;
+        self.next_token();
+
+        let expression = self.parse_expression(SymbolPriority::Lowest)?;
+
+        self.expect_token(&Token::RightParentheses)?;
+        self.next_token();
+
+        Ok(expression)
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
+        self.next_token();
+
+        let condition = self.parse_group_expression()?;
+        let true_part = self.parse_codes(&[ Token::Else, Token::End ])?;
+        let mut false_part = None;
+
+        if self.current_token_data.token == Token::Else {
+            false_part = Some(self.parse_codes(&[ Token::End ])?);
+        };
+
+        self.expect_token(&Token::End)?;
+        self.next_token();
+
+        Ok(Expression::If(Box::new(IfExpressionData { condition, true_part, false_part })))
+    }
+
+    fn parse_key_values(&mut self, terminators: &[Token], assign: Token, separator: Token, must_have_value: bool) -> Result<Vec<LocalStatementData>, ParseError> {
+        let mut key_values = Vec::new();
+        let mut last_is_seperator = false;
+
+        while !self.current_token_is_any_of(terminators) && self.current_token_data.token != Token::Eof {
+
+            // last is separator?
+            if key_values.len() > 0 && !last_is_seperator && separator.clone() != Token::None {
+                self.expect_token(&separator)?;
+            }
+
+            self.expect_token(&Token::Identifier("".to_string()))?;
+
+            let identifier = self.current_token_data.clone();
+            self.next_token();
+
+            if must_have_value {
+                self.expect_token(&assign)?;
+            }
+
+            let mut expression = None;
+
+            if self.current_token_data.token == assign {
+                self.next_token();
+
+                expression = Some(self.parse_expression(SymbolPriority::Lowest)?);
+            }
+
+            key_values.push(LocalStatementData { identifier, expression });
+
+            if separator == Token::None {
+                continue;
+            };
+
+            last_is_seperator = if self.current_token_data.token == separator {
+                self.next_token();
+                true
+            } else {
+                false
+            };
+        };
+
+        if last_is_seperator {
+            parse_error!(self.current_token_data, format!("Unexpect token [{:?}]", separator))
+        } else {
+            Ok(key_values)
+        }
+    }
+
+    fn parse_function_expression(&mut self) -> Result<Expression, ParseError> {
+        // skip function token
+        self.next_token();
+
+        // check and skip ( token
+        self.expect_token(&Token::LeftParentheses)?;
+        self.next_token();
+
+        let parameters = self.parse_key_values(&[ Token::RightParentheses ], Token::Assign, Token::Comma, false)?;
+
+        // check and skip ) token
+        self.expect_token(&Token::RightParentheses)?;
+        self.next_token();
+
+        let body = self.parse_codes(&[ Token::End ])?;
+
+        // check and skip end token
+        self.expect_token(&Token::End)?;
+        self.next_token();
+
+        Ok(Expression::Function(Box::new(FunctionExpressionData { parameters, body })))
+    }
+
+    fn parse_class_expression(&mut self) -> Result<Expression, ParseError> {
+        // skip class token
+        self.next_token();
+
+        let mut super_class = None;
+
+        if self.current_token_data.token == Token::Extends {
+            // skip extends token
+            self.next_token();
+
+            super_class = Some(self.parse_expression(SymbolPriority::Lowest)?);
+        }
+
+        let members = self.parse_key_values(&[ Token::End ], Token::Assign, Token::None, true)?;
+
+        Ok(Expression::Class(Box::new(ClassExpressionData { super_class, members })))
+    }
+
     fn get_prefix_expression(&self) -> Result<ParsePrefixExpression, ParseError> {
         match self.current_token_data.token {
             Token::Identifier(_) => Ok(Self::parse_identifier_expression),
             Token::Integer(_) => Ok(Self::parse_integer_expression),
+            Token::Float(_) => Ok(Self::parse_float_expression),
+            Token::True | Token::False => Ok(Self::parse_boolean_expression),
             Token::Base | Token::This | Token::Null => Ok(Self::parse_keyword_expression),
             Token::Minus | Token::Not => Ok(Self::parse_prefix_expression),
+            Token::LeftParentheses => Ok(Self::parse_group_expression),
+            Token::If => Ok(Self::parse_if_expression),
+            Token::Function => Ok(Self::parse_function_expression),
+            Token::Class => Ok(Self::parse_class_expression),
             _ => parse_error!(self.current_token_data, "Unexpect token when parse expression")
         }
     }

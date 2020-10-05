@@ -88,7 +88,7 @@ pub struct FunctionExpressionData {
 pub struct IfExpressionData {
     pub condition: Expression,
     pub true_part: Codes,
-    pub false_part: Codes
+    pub false_part: Option<Codes>
 }
 
 #[derive(Debug)]
@@ -105,7 +105,7 @@ pub struct InstanceGetExpressionData {
 
 #[derive(Debug)]
 pub struct ClassExpressionData {
-    pub super_class: Expression,
+    pub super_class: Option<Expression>,
     pub members: Vec<LocalStatementData>
 }
 
