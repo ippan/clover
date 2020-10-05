@@ -80,7 +80,7 @@ pub struct InfixExpressionData {
 
 #[derive(Debug)]
 pub struct FunctionExpressionData {
-    pub parameters: Vec<LocalStatementData>,
+    pub parameters: Vec<TokenData>,
     pub body: Codes
 }
 

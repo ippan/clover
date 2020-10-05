@@ -326,7 +326,22 @@ impl Parser {
         self.expect_token(&Token::LeftParentheses)?;
         self.next_token();
 
-        let parameters = self.parse_key_values(&[ Token::RightParentheses ], Token::Assign, Token::Comma, false)?;
+        let mut parameters = Vec::new();
+
+        let terminators = &[ Token::RightParentheses, Token::Eof ];
+
+        while !self.current_token_is_any_of(terminators) {
+            self.expect_token(&Token::Identifier("".to_string()))?;
+            parameters.push(self.current_token_data.clone());
+            self.next_token();
+
+            if self.current_token_data.token == Token::Comma {
+                self.next_token();
+                self.expect_token(&Token::Identifier("".to_string()))?;
+            } else {
+                self.expect_token(&Token::RightParentheses)?;
+            }
+        }
 
         // check and skip ) token
         self.expect_token(&Token::RightParentheses)?;

@@ -1,3 +1,2 @@
-pub enum OpCode {
-
-}
+mod opcode;
+mod object;
