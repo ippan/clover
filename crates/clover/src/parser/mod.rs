@@ -1,7 +1,7 @@
 mod lexer;
 
 use crate::ast::token::{TokenData, Token};
-use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData};
+use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData, ReturnStatementData};
 use crate::parser::lexer::Lexer;
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -27,17 +27,6 @@ pub struct ParseError {
 macro_rules! parse_error {
     ($token_data: expr, $message: expr) => {
         Err(ParseError { token_data: $token_data.clone(), message: $message.to_string() })
-    }
-}
-
-macro_rules! match_token {
-    ($token: ident, $($key: expr => $value: expr), *) => {
-        match $token {
-        $(
-            $key => Some($value),
-        )*
-            _ => None
-        }
     }
 }
 
@@ -157,7 +146,11 @@ impl Parser {
     }
 
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
-        parse_error!(self.current_token_data, "Not implement yet")
+        self.next_token();
+
+        let expression = self.parse_expression(SymbolPriority::Lowest)?;
+
+        Ok(Statement::Return(Box::new(ReturnStatementData { expression })))
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
