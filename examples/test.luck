@@ -1,0 +1,4 @@
+local a = 1
+local b
+local c = true
+return 999.99
