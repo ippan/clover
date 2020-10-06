@@ -128,6 +128,7 @@ impl Parser {
         Ok(program)
     }
 
+    // TODO: add for statement and while statement
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.current_token_data.token {
             Token::Local => self.parse_local_statement(),
@@ -213,13 +214,17 @@ impl Parser {
         let boolean = self.current_token_data.clone();
 
         match boolean.token {
-            Token::True | Token::False => Ok(Expression::BooleanLiteral(Box::new(BooleanLiteralExpressionData { data: boolean }))),
+            Token::True | Token::False => {
+                self.next_token();
+                Ok(Expression::BooleanLiteral(Box::new(BooleanLiteralExpressionData { data: boolean })))
+            },
             _ => parse_error!(self.current_token_data, "Unexpect token (expect boolean)")
         }
     }
 
     fn parse_keyword_expression(&mut self) -> Result<Expression, ParseError> {
         let keyword = self.current_token_data.clone();
+        self.next_token();
         match keyword.token {
             Token::Base => Ok(Expression::BaseLiteral(Box::new(BaseLiteralExpressionData { data: keyword }))),
             Token::This => Ok(Expression::ThisLiteral(Box::new(ThisLiteralExpressionData { data: keyword }))),
