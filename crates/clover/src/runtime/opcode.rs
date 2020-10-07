@@ -13,6 +13,11 @@ pub enum OpCode {
     SetLocal        = 0x06,
     GetLocal        = 0x07,
 
+    Add             = 0x20,
+    Sub             = 0x21,
+    Multiply        = 0x22,
+    Divide          = 0x23,
+
     Unknown         = 0xFF,
 }
 
@@ -31,6 +36,11 @@ impl Instruction {
             0x05 => OpCode::Return,
             0x06 => OpCode::SetLocal,
             0x07 => OpCode::GetLocal,
+
+            0x20 => OpCode::Add,
+            0x21 => OpCode::Sub,
+            0x22 => OpCode::Multiply,
+            0x23 => OpCode::Divide,
 
             _ => OpCode::Unknown
         }

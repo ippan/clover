@@ -12,7 +12,13 @@ pub struct FreeVariableIndex {
     pub local_index: u16
 }
 
+pub enum ScopeType {
+    Normal,
+    Function
+}
+
 pub struct Scope {
+    pub scope_type: ScopeType,
     pub instructions: Vec<Instruction>,
     pub parameters: Vec<String>,
     pub locals: HashMap<String, usize>,
@@ -20,8 +26,9 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn new() -> Scope {
+    pub fn new(scope_type: ScopeType) -> Scope {
         Scope {
+            scope_type,
             instructions: Vec::new(),
             parameters: Vec::new(),
             locals: HashMap::new(),
@@ -86,7 +93,10 @@ impl Compiler {
 
     fn compile_return_statement(&mut self, data: &ReturnStatementData) -> Result<(), String> {
         self.compile_expression(&data.expression)?;
-        self.emit_opcode(OpCode::Return);
+
+        let depth = self.nearest_function_depth();
+
+        self.emit(OpCode::Return.to_instruction(depth as u64));
         Ok(())
     }
 
@@ -126,6 +136,15 @@ impl Compiler {
         })
     }
 
+    fn compile_string_literal_expression(&mut self, data: &StringLiteralExpressionData) -> Result<(), String> {
+        let constant_index = self.constants.len() as u64;
+
+        unwrap_token!(Token::String(value), data.data.clone(), {
+            self.constants.push(Object::String(value));
+            self.emit(OpCode::PushConstant.to_instruction(constant_index))
+        })
+    }
+
     fn compile_boolean_literal_expression(&mut self, data: &BooleanLiteralExpressionData) -> Result<(), String> {
         match data.data.token {
             Token::True => {
@@ -138,7 +157,36 @@ impl Compiler {
             },
             _ => Err("token value not match".to_string())
         }
+    }
 
+    fn compile_null_literal_expression(&mut self, _: &NullLiteralExpressionData) -> Result<(), String> {
+        self.emit_opcode(OpCode::PushNull);
+        Ok(())
+    }
+
+    fn compile_assign_expression(&mut self, data: &InfixExpressionData) -> Result<(), String> {
+        Err("not implemented".to_string())
+    }
+
+    fn compile_infix_expression(&mut self, data: &InfixExpressionData) -> Result<(), String> {
+        match data.infix.token {
+            Token::Assign => { return self.compile_assign_expression(data); },
+            _ => {}
+        };
+
+        self.compile_expression(&data.left)?;
+        self.compile_expression(&data.right)?;
+
+        match data.infix.token {
+            Token::Plus => self.emit_opcode(OpCode::Add),
+            Token::Minus => self.emit_opcode(OpCode::Sub),
+            Token::Star => self.emit_opcode(OpCode::Multiply),
+            Token::Slash => self.emit_opcode(OpCode::Divide),
+
+            _ => { return Err(format!("unknown operator [{:?}]", data.infix.token).to_string()); }
+        }
+
+        Ok(())
     }
 
     fn compile_expression(&mut self, data: &Expression) -> Result<(), String> {
@@ -147,6 +195,8 @@ impl Compiler {
             Expression::IntegerLiteral(data) => self.compile_integer_literal_expression(data.deref()),
             Expression::FloatLiteral(data) => self.compile_float_literal_expression(data.deref()),
             Expression::BooleanLiteral(data) => self.compile_boolean_literal_expression(data.deref()),
+            Expression::StringLiteral(data) => self.compile_string_literal_expression(data.deref()),
+            Expression::NullLiteral(data) => self.compile_null_literal_expression(data.deref()),
             _ => Err("not implemented".to_string())
         }
     }
@@ -178,8 +228,8 @@ impl Compiler {
         index
     }
 
-    fn compile_scope(&mut self, codes: &Codes, parameters: &[String]) -> Scope {
-        self.push_scope();
+    fn compile_scope(&mut self, codes: &Codes, parameters: &[String], scope_type: ScopeType) -> Scope {
+        self.push_scope(scope_type);
 
         for parameter_name in parameters {
             self.current_scope().add_local(parameter_name.clone());
@@ -214,8 +264,8 @@ impl Compiler {
         self.pop_scope()
     }
 
-    fn push_scope(&mut self) {
-        let scope = Scope::new();
+    fn push_scope(&mut self, scope_type: ScopeType) {
+        let scope = Scope::new(scope_type);
         self.scopes.push(scope);
     }
 
@@ -223,12 +273,26 @@ impl Compiler {
         self.scopes.pop().unwrap()
     }
 
+    fn nearest_function_depth(&self) -> usize {
+        let mut depth = 1;
+
+        for scope in self.scopes.iter().rev() {
+            if let ScopeType::Function = scope.scope_type {
+                return depth;
+            }
+
+            depth += 1;
+        }
+
+        return 0;
+    }
+
     pub fn compile(&mut self, program: &Program) -> Result<Assembly, String> {
         self.scopes.clear();
         self.constants.clear();
         self.assembly = Some(Assembly::new());
 
-        let scope = self.compile_scope(&program.codes, &[]);
+        let scope = self.compile_scope(&program.codes, &[], ScopeType::Function);
 
         self.apply_scope_to_assembly(&scope);
 

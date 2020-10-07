@@ -36,6 +36,17 @@ pub struct State {
 }
 
 impl State {
+
+    fn build_meta_tables() -> Vec<Object> {
+        let mut meta_tables = Vec::new();
+
+
+
+
+
+        meta_tables
+    }
+
     pub fn new() -> State {
         State {
             globals: HashMap::new(),
@@ -91,6 +102,16 @@ impl State {
         &self.assemblies[frame.assembly_index]
     }
 
+    pub fn execute_operation(&mut self, name: &str) -> Result<(), String> {
+
+
+        Err("not implement yet".to_string())
+    }
+
+    pub fn instance_get(&mut self, object: &Object, key: &Object) -> Slot {
+        Slot::new(Object::Null)
+    }
+
     pub fn step(&mut self) -> Result<(), String> {
         let instruction = self.current_instruction();
         let opcode = instruction.opcode();
@@ -105,12 +126,20 @@ impl State {
             },
             OpCode::PushNull => self.stack.push_back(Slot::new(Object::Null)),
             OpCode::PushBoolean => self.stack.push_back(Slot::new(Object::Boolean(instruction.operand() == 1))),
-            OpCode::Return => { self.frames.pop_back(); },
+            OpCode::Return => {
+                for _ in 0..instruction.operand() {
+                    self.frames.pop_back();
+                };
+            },
             OpCode::SetLocal => {
                 let value = self.stack.pop_back().unwrap();
                 let slot = self.current_frame().locals.get_mut(instruction.operand() as usize).unwrap();
                 *Rc::get_mut(slot).unwrap() = value.deref().clone();
             },
+            OpCode::Add => { self.execute_operation("_add"); },
+            OpCode::Sub => { self.execute_operation("_sub"); },
+            OpCode::Multiply => { self.execute_operation("_multiply"); },
+            OpCode::Divide => { self.execute_operation("_divide"); },
             _ => {}
         };
 
