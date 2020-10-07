@@ -1,10 +1,9 @@
 use clover::parser::Parser;
-use std::collections::HashMap;
 use clover::compiler::Compiler;
-use clover::runtime::assembly::Assembly;
 use clover::runtime::state::State;
 use std::fs::read_to_string;
 use std::env;
+use clover::runtime::object::Object;
 
 fn main() {
     let arg: Vec<String> = env::args().collect();
@@ -35,6 +34,8 @@ fn main() {
                     println!("{:?}", assembly);
 
                     let mut state = State::new();
+
+                    state.add_global("ab".to_string(), Object::Integer(100));
 
                     state.add_assembly(assembly);
 

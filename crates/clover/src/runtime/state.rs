@@ -15,7 +15,7 @@ pub struct Frame {
 impl Frame {
     pub fn new(local_count: u16, assembly_index: usize, function_index: usize) -> Frame {
         let mut locals = Vec::new();
-        for i in 0..local_count {
+        for _ in 0..local_count {
             locals.push(Slot::new(Object::Null));
         };
 
@@ -62,10 +62,10 @@ impl State {
         index
     }
 
-    pub fn execute(&mut self, assembly_index: usize) -> Object {
+    pub fn execute(&mut self, assembly_index: usize) -> Result<Object, String> {
         if let Some(assembly) = self.assemblies.get(assembly_index) {
             if assembly.functions.is_empty() {
-                return Object::Null;
+                return Ok(Object::Null);
             };
 
             let function_index = assembly.functions.len() - 1;
@@ -74,11 +74,11 @@ impl State {
             self.push_frame(function.local_variable_count, assembly_index, function_index);
 
             while !self.frames.is_empty() {
-                self.step();
+                self.step()?;
             };
         }
 
-        self.stack.pop_back().unwrap().deref().clone()
+        Ok(self.stack.pop_back().unwrap().deref().clone())
     }
 
     pub fn current_frame(&mut self) -> &mut Frame {
@@ -136,10 +136,27 @@ impl State {
                 let slot = self.current_frame().locals.get_mut(instruction.operand() as usize).unwrap();
                 *Rc::get_mut(slot).unwrap() = value.deref().clone();
             },
-            OpCode::Add => { self.execute_operation("_add"); },
-            OpCode::Sub => { self.execute_operation("_sub"); },
-            OpCode::Multiply => { self.execute_operation("_multiply"); },
-            OpCode::Divide => { self.execute_operation("_divide"); },
+            OpCode::GetLocal => {
+                let value = self.current_frame().locals.get(instruction.operand() as usize).unwrap().deref().clone();
+                self.stack.push_back(Slot::new(value));
+            },
+            OpCode::GetGlobal => {
+                if let Object::String(key) = &self.current_assembly().constants[instruction.operand() as usize] {
+                    if let Some(global_object) = self.globals.get(key){
+                        let value = global_object.deref().clone();
+                        self.stack.push_back(Slot::new(value));
+                    } else {
+                        self.stack.push_back(Slot::new(Object::Null));
+                    }
+
+                } else {
+                    return Err(format!("get global with a invalid object"));
+                }
+            },
+            OpCode::Add => { self.execute_operation("_add")?; },
+            OpCode::Sub => { self.execute_operation("_sub")?; },
+            OpCode::Multiply => { self.execute_operation("_multiply")?; },
+            OpCode::Divide => { self.execute_operation("_divide")?; },
             _ => {}
         };
 
@@ -155,4 +172,7 @@ impl State {
         self.frames.push_back(Frame::new(local_count, assembly_index, function_index));
     }
 
+    pub fn add_global(&mut self, name: String, object: Object) {
+        self.globals.insert(name, Slot::new(object));
+    }
 }

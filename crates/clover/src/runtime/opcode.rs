@@ -12,6 +12,9 @@ pub enum OpCode {
     Return          = 0x05,
     SetLocal        = 0x06,
     GetLocal        = 0x07,
+    SetGlobal       = 0x08,
+    GetGlobal       = 0x09,
+
 
     Add             = 0x20,
     Sub             = 0x21,
@@ -36,6 +39,8 @@ impl Instruction {
             0x05 => OpCode::Return,
             0x06 => OpCode::SetLocal,
             0x07 => OpCode::GetLocal,
+            0x08 => OpCode::SetGlobal,
+            0x09 => OpCode::GetGlobal,
 
             0x20 => OpCode::Add,
             0x21 => OpCode::Sub,

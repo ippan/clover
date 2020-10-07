@@ -5,7 +5,6 @@ use crate::ast::*;
 use crate::ast::token::Token;
 use std::ops::Deref;
 use std::collections::HashMap;
-use crate::runtime::opcode::OpCode::Pop;
 
 pub struct FreeVariableIndex {
     pub upper_index: u16,
@@ -22,7 +21,7 @@ pub struct Scope {
     pub instructions: Vec<Instruction>,
     pub parameters: Vec<String>,
     pub locals: HashMap<String, usize>,
-    pub frees: HashMap<String, FreeVariableIndex>,
+    pub frees: Vec<FreeVariableIndex>,
 }
 
 impl Scope {
@@ -32,13 +31,32 @@ impl Scope {
             instructions: Vec::new(),
             parameters: Vec::new(),
             locals: HashMap::new(),
-            frees: HashMap::new()
+            frees: Vec::new()
         }
     }
 
     pub fn add_local(&mut self, name: String) -> usize {
         let index = self.locals.len();
         self.locals.insert(name, index);
+        index
+    }
+
+    pub fn get_local_index(&self, name: &str) -> Option<usize> {
+        if let Some(&index) = self.locals.get(name) {
+            Some(index)
+        } else {
+            None
+        }
+    }
+
+    pub fn add_free(&mut self, name: String, upper_index: usize) -> usize {
+        let index = self.add_local(name);
+
+        self.frees.push(FreeVariableIndex {
+            upper_index: upper_index as u16,
+            local_index: index as u16
+        });
+
         index
     }
 
@@ -119,28 +137,22 @@ impl Compiler {
     }
 
     fn compile_integer_literal_expression(&mut self, data: &IntegerLiteralExpressionData) -> Result<(), String> {
-        let constant_index = self.constants.len() as u64;
-
         unwrap_token!(Token::Integer(value), data.data, {
-            self.constants.push(Object::Integer(value));
+            let constant_index = self.add_integer_constant(value) as u64;
             self.emit(OpCode::PushConstant.to_instruction(constant_index))
         })
     }
 
     fn compile_float_literal_expression(&mut self, data: &FloatLiteralExpressionData) -> Result<(), String> {
-        let constant_index = self.constants.len() as u64;
-
         unwrap_token!(Token::Float(value), data.data, {
-            self.constants.push(Object::Float(value));
+            let constant_index = self.add_float_constant(value) as u64;
             self.emit(OpCode::PushConstant.to_instruction(constant_index))
         })
     }
 
     fn compile_string_literal_expression(&mut self, data: &StringLiteralExpressionData) -> Result<(), String> {
-        let constant_index = self.constants.len() as u64;
-
         unwrap_token!(Token::String(value), data.data.clone(), {
-            self.constants.push(Object::String(value));
+            let constant_index = self.add_string_constant(value) as u64;
             self.emit(OpCode::PushConstant.to_instruction(constant_index))
         })
     }
@@ -162,6 +174,19 @@ impl Compiler {
     fn compile_null_literal_expression(&mut self, _: &NullLiteralExpressionData) -> Result<(), String> {
         self.emit_opcode(OpCode::PushNull);
         Ok(())
+    }
+
+    fn compile_identifier_expression(&mut self, data: &IdentifierExpressionData) -> Result<(), String> {
+        unwrap_token!(Token::Identifier(name), data.data.clone(), {
+
+            if let Some(local_index) = self.ensure_local(&name) {
+                self.emit(OpCode::GetLocal.to_instruction(local_index as u64))
+            } else {
+                let constant_index = self.add_string_constant(name) as u64;
+                self.emit(OpCode::GetGlobal.to_instruction(constant_index))
+            }
+
+        })
     }
 
     fn compile_assign_expression(&mut self, data: &InfixExpressionData) -> Result<(), String> {
@@ -197,6 +222,7 @@ impl Compiler {
             Expression::BooleanLiteral(data) => self.compile_boolean_literal_expression(data.deref()),
             Expression::StringLiteral(data) => self.compile_string_literal_expression(data.deref()),
             Expression::NullLiteral(data) => self.compile_null_literal_expression(data.deref()),
+            Expression::Identifier(data) => self.compile_identifier_expression(data.deref()),
             _ => Err("not implemented".to_string())
         }
     }
@@ -228,7 +254,7 @@ impl Compiler {
         index
     }
 
-    fn compile_scope(&mut self, codes: &Codes, parameters: &[String], scope_type: ScopeType) -> Scope {
+    fn compile_scope(&mut self, codes: &Codes, parameters: &[String], scope_type: ScopeType) -> Result<Scope, String> {
         self.push_scope(scope_type);
 
         for parameter_name in parameters {
@@ -236,7 +262,7 @@ impl Compiler {
         };
 
         for statement in codes {
-            self.compile_statement(statement);
+            self.compile_statement(statement)?;
         };
 
         if let Some(instruction) = self.current_scope().instructions.last() {
@@ -261,7 +287,7 @@ impl Compiler {
             self.emit_opcode(OpCode::Return);
         };
 
-        self.pop_scope()
+        Ok(self.pop_scope())
     }
 
     fn push_scope(&mut self, scope_type: ScopeType) {
@@ -287,12 +313,91 @@ impl Compiler {
         return 0;
     }
 
+    fn find_local_variable(&mut self, name: &str) -> Option<(usize, usize)> {
+        for i in (0..(self.scopes.len())).rev() {
+            if let Some(scope) = self.scopes.get(i) {
+                if let Some(index) = scope.get_local_index(name) {
+                    return Some((i, index));
+                }
+            }
+        };
+
+        None
+    }
+
+    fn ensure_local(&mut self, name: &str) -> Option<usize> {
+        if let Some(&index) = self.current_scope().locals.get(name) {
+            return Some(index);
+        };
+
+        if let Some((scope_index, local_index)) = self.find_local_variable(name) {
+            let mut current_local_index = local_index;
+
+            for i in (scope_index + 1)..self.scopes.len() {
+                current_local_index = self.scopes[i].add_free(name.to_string(), current_local_index);
+            };
+
+            Some(current_local_index)
+        } else {
+            None
+        }
+    }
+
+    // TODO : move this there add constant to generic or marco
+
+    fn add_integer_constant(&mut self, value: i64) -> usize {
+        // TODO : may be add a hash map to increase search performance
+        for i in 0..self.constants.len() {
+            if let Object::Integer(stored_value) = self.constants[i] {
+                if value == stored_value {
+                    return i;
+                };
+            };
+        };
+
+        let constant_index = self.constants.len();
+        self.constants.push(Object::Integer(value));
+        constant_index
+    }
+
+    fn add_float_constant(&mut self, value: f64) -> usize {
+        // TODO : may be add a hash map to increase search performance
+        for i in 0..self.constants.len() {
+            if let Object::Float(stored_value) = self.constants[i] {
+                if value == stored_value {
+                    return i;
+                };
+            };
+        };
+
+        let constant_index = self.constants.len();
+        self.constants.push(Object::Float(value));
+        constant_index
+    }
+
+    fn add_string_constant(&mut self, value: String) -> usize {
+        // TODO : may be add a hash map to increase search performance
+        for i in 0..self.constants.len() {
+            if let Object::String(stored_value) = &self.constants[i] {
+                if value == *stored_value {
+                    return i;
+                };
+            };
+        };
+
+        let constant_index = self.constants.len();
+        self.constants.push(Object::String(value));
+        constant_index
+    }
+
+
+
     pub fn compile(&mut self, program: &Program) -> Result<Assembly, String> {
         self.scopes.clear();
         self.constants.clear();
         self.assembly = Some(Assembly::new());
 
-        let scope = self.compile_scope(&program.codes, &[], ScopeType::Function);
+        let scope = self.compile_scope(&program.codes, &[], ScopeType::Function)?;
 
         self.apply_scope_to_assembly(&scope);
 

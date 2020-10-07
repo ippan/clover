@@ -1,4 +1,4 @@
-local a = 1
-local b
-local c = true
-return 999.99
+local a = 5
+local b = 1
+local c = 999.99
+return ab
