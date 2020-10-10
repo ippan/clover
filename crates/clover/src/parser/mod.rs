@@ -3,6 +3,7 @@ mod lexer;
 use crate::ast::token::{TokenData, Token};
 use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData, ReturnStatementData};
 use crate::parser::lexer::Lexer;
+use std::fmt::Error;
 
 #[derive(Debug, PartialEq, PartialOrd)]
 enum SymbolPriority {
@@ -331,6 +332,11 @@ impl Parser {
         while !self.current_token_is_any_of(terminators) {
             self.expect_token(&Token::Identifier("".to_string()))?;
             parameters.push(self.current_token_data.clone());
+
+            if parameters.len() > 255 {
+                return parse_error!(self.current_token_data, "function can not have more than 255 parameters");
+            }
+
             self.next_token();
 
             if self.current_token_data.token == Token::Comma {

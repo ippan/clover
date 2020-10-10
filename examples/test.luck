@@ -1,4 +1,9 @@
 local a = 5
 local b = 1
-local c = 999.99
-return ab
+local c = 3
+
+local my_function = function(a, b)
+    a + b + c
+end
+
+return my_function

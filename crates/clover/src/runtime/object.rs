@@ -41,5 +41,8 @@ pub type Slot = Rc<Object>;
 
 #[derive(Debug, Clone)]
 pub struct ClosureData {
-
+    pub assembly_index: usize,
+    pub function_index: usize,
+    // key is local index
+    pub free_variables: HashMap<usize, Slot>
 }

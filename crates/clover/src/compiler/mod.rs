@@ -6,10 +6,7 @@ use crate::ast::token::Token;
 use std::ops::Deref;
 use std::collections::HashMap;
 
-pub struct FreeVariableIndex {
-    pub upper_index: u16,
-    pub local_index: u16
-}
+const MAX_LOCAL_COUNT : usize = 65536;
 
 pub enum ScopeType {
     Normal,
@@ -35,10 +32,15 @@ impl Scope {
         }
     }
 
-    pub fn add_local(&mut self, name: String) -> usize {
+    pub fn add_local(&mut self, name: String) -> Result<usize, String> {
         let index = self.locals.len();
         self.locals.insert(name, index);
-        index
+
+        if self.locals.len() > MAX_LOCAL_COUNT {
+            Err(format!("can not declare more than {} local variables(with free variables).", MAX_LOCAL_COUNT))
+        } else {
+            Ok(index)
+        }
     }
 
     pub fn get_local_index(&self, name: &str) -> Option<usize> {
@@ -49,21 +51,22 @@ impl Scope {
         }
     }
 
-    pub fn add_free(&mut self, name: String, upper_index: usize) -> usize {
-        let index = self.add_local(name);
+    pub fn add_free(&mut self, name: String, upper_index: usize) -> Result<usize, String> {
+        let index = self.add_local(name)?;
 
         self.frees.push(FreeVariableIndex {
             upper_index: upper_index as u16,
             local_index: index as u16
         });
 
-        index
+        Ok(index)
     }
 
-    pub fn to_function(& self) -> Function {
+    pub fn to_function(&self) -> Function {
         Function {
             parameter_count: self.parameters.len() as u16,
             local_variable_count: self.locals.len() as u16,
+            free_variables: self.frees.clone(),
             instructions: self.instructions.clone()
         }
     }
@@ -104,7 +107,7 @@ impl Compiler {
         };
 
         unwrap_token!(Token::Identifier(local_name), data.identifier.clone(), {
-            let index = self.current_scope().add_local(local_name) as u64;
+            let index = self.current_scope().add_local(local_name)? as u64;
             self.emit(OpCode::SetLocal.to_instruction(index));
         })
     }
@@ -179,11 +182,11 @@ impl Compiler {
     fn compile_identifier_expression(&mut self, data: &IdentifierExpressionData) -> Result<(), String> {
         unwrap_token!(Token::Identifier(name), data.data.clone(), {
 
-            if let Some(local_index) = self.ensure_local(&name) {
+            if let Some(local_index) = self.ensure_local(&name)? {
                 self.emit(OpCode::GetLocal.to_instruction(local_index as u64))
             } else {
                 let constant_index = self.add_string_constant(name) as u64;
-                self.emit(OpCode::GetGlobal.to_instruction(constant_index))
+                self.emit(OpCode::GetEnvironment.to_instruction(constant_index))
             }
 
         })
@@ -214,6 +217,25 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_function_expression(&mut self, data: &FunctionExpressionData) -> Result<(), String> {
+
+        let mut parameters = Vec::new();
+
+        for parameter in &data.parameters {
+            if let Token::Identifier(parameter_name) = &parameter.token {
+                parameters.push(parameter_name.clone());
+            }
+        }
+
+        let scope = self.compile_scope(&data.body, &parameters, ScopeType::Function)?;
+
+        let function_index = self.apply_scope_to_assembly(&scope);
+
+        self.emit(OpCode::Closure.to_instruction(function_index as u64));
+
+        Ok(())
+    }
+
     fn compile_expression(&mut self, data: &Expression) -> Result<(), String> {
 
         match data {
@@ -223,6 +245,8 @@ impl Compiler {
             Expression::StringLiteral(data) => self.compile_string_literal_expression(data.deref()),
             Expression::NullLiteral(data) => self.compile_null_literal_expression(data.deref()),
             Expression::Identifier(data) => self.compile_identifier_expression(data.deref()),
+            Expression::Infix(data) => self.compile_infix_expression(data.deref()),
+            Expression::Function(data) => self.compile_function_expression(data.deref()),
             _ => Err("not implemented".to_string())
         }
     }
@@ -243,11 +267,6 @@ impl Compiler {
         self.current_scope().instructions[index] = instruction;
     }
 
-    fn compile_function(&mut self, data: &FunctionExpressionData) {
-
-
-    }
-
     fn apply_scope_to_assembly(&mut self, scope: &Scope) -> usize {
         let index = self.assembly.as_ref().unwrap().functions.len();
         self.assembly.as_mut().unwrap().functions.push(scope.to_function());
@@ -258,7 +277,7 @@ impl Compiler {
         self.push_scope(scope_type);
 
         for parameter_name in parameters {
-            self.current_scope().add_local(parameter_name.clone());
+            self.current_scope().add_local(parameter_name.clone())?;
         };
 
         for statement in codes {
@@ -325,21 +344,21 @@ impl Compiler {
         None
     }
 
-    fn ensure_local(&mut self, name: &str) -> Option<usize> {
+    fn ensure_local(&mut self, name: &str) -> Result<Option<usize>, String> {
         if let Some(&index) = self.current_scope().locals.get(name) {
-            return Some(index);
+            return Ok(Some(index));
         };
 
         if let Some((scope_index, local_index)) = self.find_local_variable(name) {
             let mut current_local_index = local_index;
 
             for i in (scope_index + 1)..self.scopes.len() {
-                current_local_index = self.scopes[i].add_free(name.to_string(), current_local_index);
+                current_local_index = self.scopes[i].add_free(name.to_string(), current_local_index)?;
             };
 
-            Some(current_local_index)
+            Ok(Some(current_local_index))
         } else {
-            None
+            Ok(None)
         }
     }
 

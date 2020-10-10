@@ -1,5 +1,5 @@
 use std::collections::{HashMap, LinkedList};
-use crate::runtime::object::{Slot, Object};
+use crate::runtime::object::{Slot, Object, ClosureData};
 use crate::runtime::assembly::Assembly;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::rc::Rc;
@@ -97,15 +97,58 @@ impl State {
         function.instructions[program_counter]
     }
 
+    pub fn current_assembly_index(&self) -> usize {
+        self.frames.back().unwrap().assembly_index
+    }
+
     pub fn current_assembly(&self) -> &Assembly {
         let frame = self.frames.back().unwrap();
-        &self.assemblies[frame.assembly_index]
+        &self.assemblies[self.current_assembly_index()]
     }
 
     pub fn execute_operation(&mut self, name: &str) -> Result<(), String> {
+        let right = self.stack.pop_back().unwrap();
+        let left = self.stack.pop_back().unwrap();
 
+        match name {
+            "_add" => {
+                // TODO: use meta method
 
-        Err("not implement yet".to_string())
+                if let Object::Integer(left_integer) = left.deref() {
+                    if let Object::Integer(right_integer) = right.deref() {
+                        self.stack.push_back(Slot::new(Object::Integer(left_integer + right_integer)));
+
+                        return Ok(());
+                    }
+                }
+
+                Err("not implement yet".to_string())
+            },
+
+            _ => {
+                Err("not implement yet".to_string())
+            }
+        }
+
+    }
+
+    fn push_closure(&mut self, function_index: usize) -> Result<(), String> {
+        let free_variable_indices = self.current_assembly().functions.get(function_index).unwrap().free_variables.clone();
+        let assembly_index = self.current_assembly_index();
+
+        let mut free_variables = HashMap::new();
+
+        for free_variable_index in free_variable_indices {
+            free_variables.insert(free_variable_index.local_index as usize, self.current_frame().locals[free_variable_index.upper_index as usize].clone());
+        };
+
+        self.stack.push_back(Slot::new(Object::Closure(Rc::new(ClosureData {
+            assembly_index,
+            free_variables,
+            function_index
+        }))));
+
+        Ok(())
     }
 
     pub fn instance_get(&mut self, object: &Object, key: &Object) -> Slot {
@@ -140,7 +183,7 @@ impl State {
                 let value = self.current_frame().locals.get(instruction.operand() as usize).unwrap().deref().clone();
                 self.stack.push_back(Slot::new(value));
             },
-            OpCode::GetGlobal => {
+            OpCode::GetEnvironment => {
                 if let Object::String(key) = &self.current_assembly().constants[instruction.operand() as usize] {
                     if let Some(global_object) = self.globals.get(key){
                         let value = global_object.deref().clone();
@@ -152,11 +195,14 @@ impl State {
                 } else {
                     return Err(format!("get global with a invalid object"));
                 }
-            },
+            }
             OpCode::Add => { self.execute_operation("_add")?; },
             OpCode::Sub => { self.execute_operation("_sub")?; },
             OpCode::Multiply => { self.execute_operation("_multiply")?; },
             OpCode::Divide => { self.execute_operation("_divide")?; },
+
+            OpCode::Closure => { self.push_closure(instruction.operand() as usize)? },
+
             _ => {}
         };
 
