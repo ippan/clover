@@ -222,9 +222,16 @@ impl State {
                 };
             },
             OpCode::SetLocal => {
+                let operand = instruction.operand();
+                let slot_index = operand & 0x000000000000FFFF;
+                let need_pop = operand & 0x00FF000000000000;
+
                 let value = self.stack.pop_back().unwrap();
-                let slot = self.current_frame().locals.get_mut(instruction.operand() as usize).unwrap();
+                let slot = self.current_frame().locals.get_mut(slot_index as usize).unwrap();
                 *slot.borrow_mut() = value.borrow().clone();
+                if need_pop > 0 {
+                    self.stack.push_back(value);
+                }
             },
             OpCode::GetLocal => {
                 let value = self.current_frame().locals.get(instruction.operand() as usize).unwrap().deref().clone();

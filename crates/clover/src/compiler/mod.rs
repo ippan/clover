@@ -130,7 +130,6 @@ impl Compiler {
     }
 
     fn compile_expression_statement(&mut self, data: &ExpressionStatementData) -> Result<(), String> {
-
         self.compile_expression(&data.expression)?;
 
         self.emit_opcode(OpCode::Pop);
@@ -208,7 +207,7 @@ impl Compiler {
             Expression::Identifier(identifier_data) => {
                 if let Token::Identifier(identifier) = &identifier_data.deref().data.token {
                     if let Some(local_index) = self.ensure_local(identifier)? {
-                        self.emit(OpCode::SetLocal.to_instruction(local_index as u64))
+                        self.emit(OpCode::SetLocal.to_instruction((local_index | 0x0001000000000000) as u64))
                     } else {
                         let constant_index = self.add_string_constant(identifier.clone()) as u64;
                         self.emit(OpCode::SetEnvironment.to_instruction(constant_index))
