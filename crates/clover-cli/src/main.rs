@@ -4,6 +4,9 @@ use clover::runtime::state::State;
 use std::fs::read_to_string;
 use std::env;
 use clover::runtime::object::Object;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::ops::Deref;
 
 fn main() {
     let arg: Vec<String> = env::args().collect();

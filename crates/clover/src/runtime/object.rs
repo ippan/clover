@@ -2,6 +2,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use crate::runtime::NativeFunction;
 use std::fmt;
+use std::cell::RefCell;
 
 // stack size of object is 56 (HashMap size)
 #[derive(Clone)]
@@ -37,7 +38,7 @@ impl fmt::Debug for Object {
     }
 }
 
-pub type Slot = Rc<Object>;
+pub type Slot = Rc<RefCell<Object>>;
 
 #[derive(Debug, Clone)]
 pub struct ClosureData {

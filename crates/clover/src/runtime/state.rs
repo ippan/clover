@@ -4,6 +4,7 @@ use crate::runtime::assembly::Assembly;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::rc::Rc;
 use std::ops::Deref;
+use std::cell::{RefCell, Ref};
 
 pub struct Frame {
     pub locals: Vec<Slot>,
@@ -16,7 +17,7 @@ impl Frame {
     pub fn new(local_count: u16, assembly_index: usize, function_index: usize) -> Frame {
         let mut locals = Vec::new();
         for _ in 0..local_count {
-            locals.push(Slot::new(Object::Null));
+            locals.push(Slot::new(RefCell::new(Object::Null)));
         };
 
         Frame {
@@ -78,7 +79,7 @@ impl State {
             };
         }
 
-        Ok(self.stack.pop_back().unwrap().deref().clone())
+        Ok(self.stack.pop_back().unwrap().borrow().deref().clone())
     }
 
     pub fn current_frame(&mut self) -> &mut Frame {
@@ -114,9 +115,9 @@ impl State {
             "_add" => {
                 // TODO: use meta method
 
-                if let Object::Integer(left_integer) = left.deref() {
-                    if let Object::Integer(right_integer) = right.deref() {
-                        self.stack.push_back(Slot::new(Object::Integer(left_integer + right_integer)));
+                if let Object::Integer(left_integer) = left.borrow().deref() {
+                    if let Object::Integer(right_integer) = right.borrow().deref() {
+                        self.stack.push_back(Slot::new(RefCell::new(Object::Integer(left_integer + right_integer))));
 
                         return Ok(());
                     }
@@ -142,17 +143,63 @@ impl State {
             free_variables.insert(free_variable_index.local_index as usize, self.current_frame().locals[free_variable_index.upper_index as usize].clone());
         };
 
-        self.stack.push_back(Slot::new(Object::Closure(Rc::new(ClosureData {
+        self.stack.push_back(Slot::new(RefCell::new(Object::Closure(Rc::new(ClosureData {
             assembly_index,
             free_variables,
             function_index
-        }))));
+        })))));
 
         Ok(())
     }
 
     pub fn instance_get(&mut self, object: &Object, key: &Object) -> Slot {
-        Slot::new(Object::Null)
+        Slot::new(RefCell::new(Object::Null))
+    }
+
+    pub fn call_closure(&mut self, closure: &ClosureData, parameters: &[Slot]) -> Result<(), String> {
+
+        let assembly_index = closure.assembly_index;
+        let function_index = closure.function_index;
+
+        let (parameter_count, local_variable_count) = {
+            let function = &self.assemblies[assembly_index].functions[function_index];
+            (function.parameter_count as usize, function.local_variable_count)
+        };
+
+        self.push_frame(local_variable_count, assembly_index, function_index);
+
+        for (i, slot) in parameters.iter().rev().enumerate() {
+            if i < parameter_count {
+                self.current_frame().locals[i] = slot.clone();
+            } else {
+                // TODO : print warning
+            }
+        }
+
+        for (&i, slot) in closure.free_variables.iter() {
+            self.current_frame().locals[i] = slot.clone();
+        }
+
+        Ok(())
+    }
+
+    pub fn call(&mut self, parameter_count: usize) -> Result<(), String> {
+
+        let callable = self.stack.pop_back().unwrap();
+
+        let mut parameters = Vec::new();
+
+        for _ in 0..parameter_count {
+            parameters.push(self.stack.pop_back().unwrap());
+        }
+
+        let callable_object = callable.borrow().deref().clone();
+
+        match callable_object
+        {
+            Object::Closure(closure) => self.call_closure(closure.deref(), &parameters),
+            _ => return Err(format!("object is not callable"))
+        }
     }
 
     pub fn step(&mut self) -> Result<(), String> {
@@ -165,10 +212,10 @@ impl State {
             OpCode::Pop => { self.stack.pop_back(); },
             OpCode::PushConstant => {
                 let constant = self.current_assembly().constants[instruction.operand() as usize].clone();
-                self.stack.push_back(Slot::new(constant));
+                self.stack.push_back(Slot::new(RefCell::new(constant)));
             },
-            OpCode::PushNull => self.stack.push_back(Slot::new(Object::Null)),
-            OpCode::PushBoolean => self.stack.push_back(Slot::new(Object::Boolean(instruction.operand() == 1))),
+            OpCode::PushNull => self.stack.push_back(Slot::new(RefCell::new(Object::Null))),
+            OpCode::PushBoolean => self.stack.push_back(Slot::new(RefCell::new(Object::Boolean(instruction.operand() == 1)))),
             OpCode::Return => {
                 for _ in 0..instruction.operand() {
                     self.frames.pop_back();
@@ -177,7 +224,7 @@ impl State {
             OpCode::SetLocal => {
                 let value = self.stack.pop_back().unwrap();
                 let slot = self.current_frame().locals.get_mut(instruction.operand() as usize).unwrap();
-                *Rc::get_mut(slot).unwrap() = value.deref().clone();
+                *slot.borrow_mut() = value.borrow().clone();
             },
             OpCode::GetLocal => {
                 let value = self.current_frame().locals.get(instruction.operand() as usize).unwrap().deref().clone();
@@ -189,7 +236,7 @@ impl State {
                         let value = global_object.deref().clone();
                         self.stack.push_back(Slot::new(value));
                     } else {
-                        self.stack.push_back(Slot::new(Object::Null));
+                        self.stack.push_back(Slot::new(RefCell::new(Object::Null)));
                     }
 
                 } else {
@@ -201,7 +248,8 @@ impl State {
             OpCode::Multiply => { self.execute_operation("_multiply")?; },
             OpCode::Divide => { self.execute_operation("_divide")?; },
 
-            OpCode::Closure => { self.push_closure(instruction.operand() as usize)? },
+            OpCode::Closure => { self.push_closure(instruction.operand() as usize)?; },
+            OpCode::Call => { self.call(instruction.operand() as usize)?; }
 
             _ => {}
         };
@@ -219,6 +267,6 @@ impl State {
     }
 
     pub fn add_global(&mut self, name: String, object: Object) {
-        self.globals.insert(name, Slot::new(object));
+        self.globals.insert(name, Slot::new(RefCell::new(object)));
     }
 }

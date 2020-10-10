@@ -1,7 +1,7 @@
 mod lexer;
 
 use crate::ast::token::{TokenData, Token};
-use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData, ReturnStatementData};
+use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData, ReturnStatementData, CallExpressionData};
 use crate::parser::lexer::Lexer;
 use std::fmt::Error;
 
@@ -405,6 +405,35 @@ impl Parser {
         Ok(Expression::Infix(Box::new(InfixExpressionData { left: expression, infix: token_data, right })))
     }
 
+    fn parse_call_expression(&mut self, expression: Expression) -> Result<Expression, ParseError> {
+        self.expect_token(&Token::LeftParentheses)?;
+        self.next_token();
+
+        let mut parameters = Vec::new();
+
+        let terminators = &[ Token::RightParentheses, Token::Eof ];
+
+        while !self.current_token_is_any_of(terminators) {
+            parameters.push(self.parse_expression(SymbolPriority::Lowest)?);
+
+            if parameters.len() > 255 {
+                return parse_error!(self.current_token_data, "function can not have more than 255 parameters");
+            }
+
+            if self.current_token_data.token == Token::Comma {
+                self.next_token();
+            } else {
+                self.expect_token(&Token::RightParentheses)?;
+            }
+        }
+
+        // check and skip ) token
+        self.expect_token(&Token::RightParentheses)?;
+        self.next_token();
+
+        Ok(Expression::Call(Box::new(CallExpressionData { function: expression, parameters })))
+    }
+
     fn get_infix_expression(&self) -> Result<Option<ParseInfixExpression>, ParseError> {
         match self.current_token_data.token {
 
@@ -412,6 +441,7 @@ impl Parser {
             Token::And | Token::Or | Token::Equal | Token::NotEqual | Token::Less | Token::Greater | Token::LessEqual | Token::GreaterEqual |
             Token::BitAnd | Token::BitOr | Token::Plus | Token::Minus | Token::Star | Token::Slash
             => Ok(Some(Self::parse_infix_expression)),
+            Token::LeftParentheses => Ok(Some(Self::parse_call_expression)),
             _ => Ok(None)
         }
     }

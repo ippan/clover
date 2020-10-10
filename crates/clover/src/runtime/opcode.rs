@@ -21,6 +21,7 @@ pub enum OpCode {
     Divide          = 0x23,
 
     Closure         = 0x30,
+    Call            = 0x31,
 
     Unknown         = 0xFF,
 }
@@ -49,6 +50,7 @@ impl Instruction {
             0x23 => OpCode::Divide,
 
             0x30 => OpCode::Closure,
+            0x31 => OpCode::Call,
 
             _ => OpCode::Unknown
         }

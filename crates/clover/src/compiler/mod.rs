@@ -16,7 +16,7 @@ pub enum ScopeType {
 pub struct Scope {
     pub scope_type: ScopeType,
     pub instructions: Vec<Instruction>,
-    pub parameters: Vec<String>,
+    pub parameter_count: u16,
     pub locals: HashMap<String, usize>,
     pub frees: Vec<FreeVariableIndex>,
 }
@@ -26,7 +26,7 @@ impl Scope {
         Scope {
             scope_type,
             instructions: Vec::new(),
-            parameters: Vec::new(),
+            parameter_count: 0,
             locals: HashMap::new(),
             frees: Vec::new()
         }
@@ -34,6 +34,11 @@ impl Scope {
 
     pub fn add_local(&mut self, name: String) -> Result<usize, String> {
         let index = self.locals.len();
+
+        if self.locals.contains_key(&name) {
+            return Err(format!("local variable [{}] already exists", name));
+        };
+
         self.locals.insert(name, index);
 
         if self.locals.len() > MAX_LOCAL_COUNT {
@@ -64,7 +69,7 @@ impl Scope {
 
     pub fn to_function(&self) -> Function {
         Function {
-            parameter_count: self.parameters.len() as u16,
+            parameter_count: self.parameter_count,
             local_variable_count: self.locals.len() as u16,
             free_variables: self.frees.clone(),
             instructions: self.instructions.clone()
@@ -112,12 +117,15 @@ impl Compiler {
         })
     }
 
+    fn generate_return_instruction(&self) -> Instruction {
+        let depth = self.nearest_function_depth();
+        OpCode::Return.to_instruction(depth as u64)
+    }
+
     fn compile_return_statement(&mut self, data: &ReturnStatementData) -> Result<(), String> {
         self.compile_expression(&data.expression)?;
 
-        let depth = self.nearest_function_depth();
-
-        self.emit(OpCode::Return.to_instruction(depth as u64));
+        self.emit(self.generate_return_instruction());
         Ok(())
     }
 
@@ -193,7 +201,27 @@ impl Compiler {
     }
 
     fn compile_assign_expression(&mut self, data: &InfixExpressionData) -> Result<(), String> {
-        Err("not implemented".to_string())
+
+        self.compile_expression(&data.right)?;
+
+        match &data.left {
+            Expression::Identifier(identifier_data) => {
+                if let Token::Identifier(identifier) = &identifier_data.deref().data.token {
+                    if let Some(local_index) = self.ensure_local(identifier)? {
+                        self.emit(OpCode::SetLocal.to_instruction(local_index as u64))
+                    } else {
+                        let constant_index = self.add_string_constant(identifier.clone()) as u64;
+                        self.emit(OpCode::SetEnvironment.to_instruction(constant_index))
+                    }
+                }
+
+                Ok(())
+            },
+            _ => Err("not implemented".to_string())
+        }
+
+
+
     }
 
     fn compile_infix_expression(&mut self, data: &InfixExpressionData) -> Result<(), String> {
@@ -236,6 +264,18 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_call_expression(&mut self, data: &CallExpressionData) -> Result<(), String> {
+        for expression in &data.parameters {
+            self.compile_expression(expression)?;
+        };
+
+        self.compile_expression(&data.function)?;
+
+        self.emit(OpCode::Call.to_instruction(data.parameters.len() as u64));
+
+        Ok(())
+    }
+
     fn compile_expression(&mut self, data: &Expression) -> Result<(), String> {
 
         match data {
@@ -247,6 +287,7 @@ impl Compiler {
             Expression::Identifier(data) => self.compile_identifier_expression(data.deref()),
             Expression::Infix(data) => self.compile_infix_expression(data.deref()),
             Expression::Function(data) => self.compile_function_expression(data.deref()),
+            Expression::Call(data) => self.compile_call_expression(data.deref()),
             _ => Err("not implemented".to_string())
         }
     }
@@ -276,6 +317,8 @@ impl Compiler {
     fn compile_scope(&mut self, codes: &Codes, parameters: &[String], scope_type: ScopeType) -> Result<Scope, String> {
         self.push_scope(scope_type);
 
+        self.current_scope().parameter_count = parameters.len() as u16;
+
         for parameter_name in parameters {
             self.current_scope().add_local(parameter_name.clone())?;
         };
@@ -289,7 +332,7 @@ impl Compiler {
                 OpCode::Pop => {
                     // last statement is a expression statement, just return that expression
                     let instruction_index = self.current_scope().instructions.len() - 1;
-                    self.replace_instruction(instruction_index, OpCode::Return.to_instruction(0));
+                    self.replace_instruction(instruction_index, self.generate_return_instruction());
                 },
                 OpCode::Return => {
                     // do nothing
@@ -297,13 +340,13 @@ impl Compiler {
                 _ => {
                     // last statement is not a expression statement, return null
                     self.emit_opcode(OpCode::PushNull);
-                    self.emit_opcode(OpCode::Return);
+                    self.emit(self.generate_return_instruction());
                 }
             };
         } else {
             // do not have any statement, return null
             self.emit_opcode(OpCode::PushNull);
-            self.emit_opcode(OpCode::Return);
+            self.emit(self.generate_return_instruction());
         };
 
         Ok(self.pop_scope())
