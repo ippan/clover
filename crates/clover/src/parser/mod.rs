@@ -1,9 +1,10 @@
 mod lexer;
 
 use crate::ast::token::{TokenData, Token};
-use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData, ReturnStatementData, CallExpressionData};
+use crate::ast::{Program, Statement, LocalStatementData, Expression, ExpressionStatementData, IdentifierExpressionData, InfixExpressionData, IntegerLiteralExpressionData, BaseLiteralExpressionData, NullLiteralExpressionData, ThisLiteralExpressionData, PrefixExpressionData, FloatLiteralExpressionData, BooleanLiteralExpressionData, Codes, IfExpressionData, FunctionExpressionData, ClassExpressionData, ReturnStatementData, CallExpressionData, InstanceGetExpressionData, StringLiteralExpressionData};
 use crate::parser::lexer::Lexer;
 use std::fmt::Error;
+use std::process::id;
 
 #[derive(Debug, PartialEq, PartialOrd)]
 enum SymbolPriority {
@@ -375,6 +376,10 @@ impl Parser {
 
         let members = self.parse_key_values(&[ Token::End ], Token::Assign, Token::None, true)?;
 
+        self.expect_token(&Token::End);
+
+        self.next_token();
+
         Ok(Expression::Class(Box::new(ClassExpressionData { super_class, members })))
     }
 
@@ -434,6 +439,34 @@ impl Parser {
         Ok(Expression::Call(Box::new(CallExpressionData { function: expression, parameters })))
     }
 
+    fn parse_instance_get_expression(&mut self, expression: Expression) -> Result<Expression, ParseError> {
+
+        let token = self.current_token_data.token.clone();
+        self.next_token();
+
+        let index = match token {
+            Token::Dot => {
+                if let Token::Identifier(identifier) = self.current_token_data.token.clone() {
+                    Expression::StringLiteral(Box::new(StringLiteralExpressionData { data: TokenData::new(Token::String(identifier), self.current_token_data.line) }))
+                } else {
+                    return parse_error!(self.current_token_data, "after dot token must be a identifier");
+                }
+            },
+            Token::LeftBracket => {
+                let index = self.parse_expression(SymbolPriority::Lowest)?;
+                self.expect_token(&Token::RightBracket)?;
+                self.next_token();
+                index
+            },
+            _ => { return parse_error!(self.current_token_data, "not implement instance get yet"); }
+        };
+
+        self.next_token();
+
+
+        Ok(Expression::InstanceGet(Box::new(InstanceGetExpressionData { instance: expression, index })))
+    }
+
     fn get_infix_expression(&self) -> Result<Option<ParseInfixExpression>, ParseError> {
         match self.current_token_data.token {
 
@@ -442,6 +475,7 @@ impl Parser {
             Token::BitAnd | Token::BitOr | Token::Plus | Token::Minus | Token::Star | Token::Slash
             => Ok(Some(Self::parse_infix_expression)),
             Token::LeftParentheses => Ok(Some(Self::parse_call_expression)),
+            Token::Dot | Token::LeftBracket => Ok(Some(Self::parse_instance_get_expression)),
             _ => Ok(None)
         }
     }

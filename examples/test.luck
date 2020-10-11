@@ -1,15 +1,33 @@
-local a = 5
-local b = 1
-local c = 3
+
+a = 1
+b = 2
+local c = a
 
 local modify = function()
-    c = 10
+    a = 10
 end
 
-local my_function = function(a, b)
-    a + b + c
+local my_function = function(value)
+    a + b + c + ab + value
 end
+
+b = 20
+
+c = 3
 
 modify()
 
-return my_function(a, 3)
+print(a, b, c, ab)
+
+local gg = class
+    a = 10
+
+    yy = function()
+        100
+    end
+
+end
+
+print(gg)
+
+return my_function(gg.yy())

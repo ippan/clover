@@ -3,10 +3,18 @@ use clover::compiler::Compiler;
 use clover::runtime::state::State;
 use std::fs::read_to_string;
 use std::env;
-use clover::runtime::object::Object;
+use clover::runtime::object::{Object, Slot};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::ops::Deref;
+
+fn print(_: &mut State, parameters: &[Slot]) -> Result<Object, String> {
+    for slot in parameters {
+        println!("{:?}", slot.borrow().deref());
+    };
+
+    Ok(Object::Null)
+}
 
 fn main() {
     let arg: Vec<String> = env::args().collect();
@@ -39,6 +47,8 @@ fn main() {
                     let mut state = State::new();
 
                     state.add_global("ab".to_string(), Object::Integer(100));
+
+                    state.add_global_function("print".to_string(), print);
 
                     state.add_assembly(assembly);
 

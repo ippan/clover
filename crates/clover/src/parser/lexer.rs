@@ -28,14 +28,20 @@ impl Lexer {
         }
     }
 
-    pub fn lex(&mut self) -> TokenData {
-        while is_space(self.get_current_character()) {
-            self.next_character();
-        };
+    pub fn skip_spaces_and_comments(&mut self) {
+        while is_space(self.get_current_character()) || self.get_current_character() == '#' {
+            while is_space(self.get_current_character()) {
+                self.next_character();
+            };
 
-        if self.get_current_character() == '#' {
-            self.skip_comment();
+            if self.get_current_character() == '#' {
+                self.skip_comment();
+            }
         }
+    }
+
+    pub fn lex(&mut self) -> TokenData {
+        self.skip_spaces_and_comments();
 
         let character = self.get_current_character();
 

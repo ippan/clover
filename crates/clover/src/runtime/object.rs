@@ -14,8 +14,8 @@ pub enum Object {
     Null,
 
     // reference types
-    Map(Rc<HashMap<String, Slot>>),
-    Array(Rc<Vec<Slot>>),
+    Map(Rc<RefCell<HashMap<String, Slot>>>),
+    Array(Rc<RefCell<Vec<Slot>>>),
     Closure(Rc<ClosureData>),
     NativeFunction(NativeFunction)
 }

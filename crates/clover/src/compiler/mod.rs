@@ -112,8 +112,8 @@ impl Compiler {
         };
 
         unwrap_token!(Token::Identifier(local_name), data.identifier.clone(), {
-            let index = self.current_scope().add_local(local_name)? as u64;
-            self.emit(OpCode::SetLocal.to_instruction(index));
+            let index = self.current_scope().add_local(local_name)?;
+            self.emit(OpCode::LocalSet.to_instruction((index | 0x0001000000000000) as u64))
         })
     }
 
@@ -190,10 +190,10 @@ impl Compiler {
         unwrap_token!(Token::Identifier(name), data.data.clone(), {
 
             if let Some(local_index) = self.ensure_local(&name)? {
-                self.emit(OpCode::GetLocal.to_instruction(local_index as u64))
+                self.emit(OpCode::LocalGet.to_instruction(local_index as u64))
             } else {
                 let constant_index = self.add_string_constant(name) as u64;
-                self.emit(OpCode::GetEnvironment.to_instruction(constant_index))
+                self.emit(OpCode::EnvironmentGet.to_instruction(constant_index))
             }
 
         })
@@ -207,10 +207,10 @@ impl Compiler {
             Expression::Identifier(identifier_data) => {
                 if let Token::Identifier(identifier) = &identifier_data.deref().data.token {
                     if let Some(local_index) = self.ensure_local(identifier)? {
-                        self.emit(OpCode::SetLocal.to_instruction((local_index | 0x0001000000000000) as u64))
+                        self.emit(OpCode::LocalSet.to_instruction(local_index  as u64))
                     } else {
                         let constant_index = self.add_string_constant(identifier.clone()) as u64;
-                        self.emit(OpCode::SetEnvironment.to_instruction(constant_index))
+                        self.emit(OpCode::EnvironmentSet.to_instruction(constant_index))
                     }
                 }
 
@@ -275,6 +275,42 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_class_expression(&mut self, data: &ClassExpressionData) -> Result<(), String> {
+        self.emit_opcode(OpCode::PushNewMap);
+
+        for member in data.members.iter() {
+            if let Token::Identifier(identifier) = &member.identifier.token {
+                let constant_index = self.add_string_constant(identifier.clone()) as u64;
+                self.emit(OpCode::PushConstant.to_instruction(constant_index));
+
+                if let Some(expression) = &member.expression {
+                    self.compile_expression(expression)?;
+                } else {
+                    self.emit_opcode(OpCode::PushNull);
+                };
+
+                self.emit(OpCode::InstanceSet.to_instruction(1));
+
+            } else {
+                return Err("unknown token when compile class".to_string());
+            };
+        };
+
+        // TODO : implement extents
+
+        Ok(())
+    }
+
+    fn compile_instance_get_expression(&mut self, data: &InstanceGetExpressionData) -> Result<(), String> {
+        self.compile_expression(&data.instance)?;
+
+        self.compile_expression(&data.index)?;
+
+        self.emit_opcode(OpCode::InstanceGet);
+
+        Ok(())
+    }
+
     fn compile_expression(&mut self, data: &Expression) -> Result<(), String> {
 
         match data {
@@ -287,6 +323,8 @@ impl Compiler {
             Expression::Infix(data) => self.compile_infix_expression(data.deref()),
             Expression::Function(data) => self.compile_function_expression(data.deref()),
             Expression::Call(data) => self.compile_call_expression(data.deref()),
+            Expression::Class(data) => self.compile_class_expression(data.deref()),
+            Expression::InstanceGet(data) => self.compile_instance_get_expression(data.deref()),
             _ => Err("not implemented".to_string())
         }
     }

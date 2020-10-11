@@ -7,4 +7,4 @@ pub mod meta_table;
 pub mod state;
 pub mod assembly;
 
-pub type NativeFunction = fn(&mut State, &mut Object, Vec<Slot>) -> Object;
+pub type NativeFunction = fn(&mut State, &[Slot]) -> Result<Object, String>;

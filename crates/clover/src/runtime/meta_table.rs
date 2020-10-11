@@ -1,6 +1,7 @@
 use crate::runtime::object::Object;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct IntegerMetaTable;
 
@@ -14,7 +15,7 @@ impl IntegerMetaTable {
 
 
 
-        Object::Map(Rc::new(meta_table))
+        Object::Map(Rc::new(RefCell::new(meta_table)))
     }
 
 }

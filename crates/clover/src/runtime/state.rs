@@ -3,8 +3,10 @@ use crate::runtime::object::{Slot, Object, ClosureData};
 use crate::runtime::assembly::Assembly;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::rc::Rc;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::cell::{RefCell, Ref};
+use crate::runtime::NativeFunction;
+use std::borrow::BorrowMut;
 
 pub struct Frame {
     pub locals: Vec<Slot>,
@@ -55,6 +57,12 @@ impl State {
             frames: LinkedList::new(),
             assemblies: Vec::new()
         }
+    }
+
+    pub fn add_global_function(&mut self, name: String, native_function: NativeFunction) -> Result<(), String> {
+        self.globals.insert(name, Slot::new(RefCell::new(Object::NativeFunction(native_function))));
+
+        Ok(())
     }
 
     pub fn add_assembly(&mut self, assembly: Assembly) -> usize {
@@ -183,6 +191,15 @@ impl State {
         Ok(())
     }
 
+    pub fn call_native(&mut self, native_function: NativeFunction, parameters: &[Slot]) -> Result<(), String> {
+
+        let object = native_function(self, parameters)?;
+
+        self.stack.push_back(Slot::new(RefCell::new(object)));
+
+        Ok(())
+    }
+
     pub fn call(&mut self, parameter_count: usize) -> Result<(), String> {
 
         let callable = self.stack.pop_back().unwrap();
@@ -198,6 +215,7 @@ impl State {
         match callable_object
         {
             Object::Closure(closure) => self.call_closure(closure.deref(), &parameters),
+            Object::NativeFunction(native_function) => self.call_native(native_function, &parameters),
             _ => return Err(format!("object is not callable"))
         }
     }
@@ -221,23 +239,27 @@ impl State {
                     self.frames.pop_back();
                 };
             },
-            OpCode::SetLocal => {
+            OpCode::LocalSet => {
                 let operand = instruction.operand();
                 let slot_index = operand & 0x000000000000FFFF;
                 let need_pop = operand & 0x00FF000000000000;
 
                 let value = self.stack.pop_back().unwrap();
                 let slot = self.current_frame().locals.get_mut(slot_index as usize).unwrap();
-                *slot.borrow_mut() = value.borrow().clone();
-                if need_pop > 0 {
+                slot.replace((*value.as_ref().borrow()).clone());
+
+                // if no need to pop, leave value at stack
+                if need_pop == 0 {
                     self.stack.push_back(value);
                 }
-            },
-            OpCode::GetLocal => {
+            }
+            OpCode::LocalGet => {
                 let value = self.current_frame().locals.get(instruction.operand() as usize).unwrap().deref().clone();
                 self.stack.push_back(Slot::new(value));
-            },
-            OpCode::GetEnvironment => {
+            }
+            OpCode::EnvironmentGet => {
+                // TODO : check instance
+
                 if let Object::String(key) = &self.current_assembly().constants[instruction.operand() as usize] {
                     if let Some(global_object) = self.globals.get(key){
                         let value = global_object.deref().clone();
@@ -249,16 +271,72 @@ impl State {
                 } else {
                     return Err(format!("get global with a invalid object"));
                 }
-            }
+            },
+            OpCode::EnvironmentSet => {
+                // TODO : check instance
+
+                let slot = self.stack.pop_back().unwrap();
+
+                if let Object::String(key) = &self.current_assembly().constants[instruction.operand() as usize].clone() {
+                    self.globals.insert(key.clone(), slot.clone());
+                    self.stack.push_back(slot);
+                } else {
+                    return Err(format!("get global with a invalid object"));
+                }
+            },
+            OpCode::InstanceSet => {
+                let slot = self.stack.pop_back().unwrap();
+
+                let key = self.stack.pop_back().unwrap();
+
+                let key_string = get_key_string(key)?;
+
+                let mut instance = self.stack.pop_back().unwrap();
+
+                if let Object::Map(map) = instance.deref().borrow().deref() {
+                    map.deref().borrow_mut().insert(key_string, slot.clone());
+                } else {
+                    return Err("instance is not a map".to_string());
+                };
+
+                // operand = 0, push value
+                // operand > 0, push instance,
+                if instruction.operand() == 0 {
+                    self.stack.push_back(slot);
+                } else {
+                    self.stack.push_back(instance);
+                }
+            },
+
+            OpCode::InstanceGet => {
+                let key = self.stack.pop_back().unwrap();
+                let key_string= get_key_string(key)?;
+
+                let mut instance = self.stack.pop_back().unwrap();
+
+                // TODO : check meta table
+
+                if let Object::Map(map) = instance.deref().borrow().deref() {
+                    // TODO : check exists
+                    let slot= map.borrow().get(&key_string).unwrap().clone();
+
+                    self.stack.push_back(slot);
+                } else {
+                    return Err("instance is not a map".to_string());
+                };
+
+            },
             OpCode::Add => { self.execute_operation("_add")?; },
             OpCode::Sub => { self.execute_operation("_sub")?; },
             OpCode::Multiply => { self.execute_operation("_multiply")?; },
             OpCode::Divide => { self.execute_operation("_divide")?; },
 
             OpCode::Closure => { self.push_closure(instruction.operand() as usize)?; },
-            OpCode::Call => { self.call(instruction.operand() as usize)?; }
+            OpCode::Call => { self.call(instruction.operand() as usize)?; },
 
-            _ => {}
+            OpCode::PushNewMap => { self.stack.push_back(Slot::new(RefCell::new(Object::Map(Rc::new(RefCell::new(HashMap::new())))))); }
+
+            _ => { return Err(format!("unknown instruction: {:?}", instruction)); }
         };
 
         Ok(())
@@ -275,5 +353,13 @@ impl State {
 
     pub fn add_global(&mut self, name: String, object: Object) {
         self.globals.insert(name, Slot::new(RefCell::new(object)));
+    }
+}
+
+fn get_key_string(slot: Slot) -> Result<String, String> {
+    if let Object::String(object_string) = slot.borrow().deref() {
+        Ok(object_string.clone())
+    } else {
+        Err("key is not a string".to_string())
     }
 }
