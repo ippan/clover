@@ -1,40 +1,42 @@
 # Clover
 
-a toy object-oriented language created in Rust
+a toy language created in Rust
 
 still in development~
 
-#### Rust version is under development, some feature have not implemented. If you want to find the C# version, go to https://github.com/ippan/clover/tree/csharp
-
 ### features
 * bytecode
-* classes & inheritance
 * first class function
-* closure 
 
 ## Example
 
-    sum = function(a, b)
-      a + b
+    include Vector2D as Vector from "./vector"
+
+    public model Rect
+      start
+      size
     end
 
-    c = sum(1, 2)
-
-    MyBaseClass = class 
-      hello = 'hello'
-
-      say = function()
-        hello
+    implement Rect
+      function new()
+        local rect = Rect()
+        rect.start = Vector.new()
+        rect.size = Vector.new()
+        rect
       end
     end
 
-    MyClass = class extends MyBaseClass
-
-      say = function()
-        base.say() + base.say()
-      end
-
+    model MyRect
     end
+
+    # copy all function in Rect to MyRect
+    apply Rect to MyRect
+
+    function main()
+      local rect = MyRect.new()
+      rect
+    end
+
 
 ## Usage
 

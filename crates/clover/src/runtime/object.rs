@@ -1,10 +1,28 @@
-use std::rc::Rc;
-use std::collections::HashMap;
-use crate::runtime::NativeFunction;
 use std::fmt;
+use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
-// stack size of object is 56 (HashMap size)
+pub type Reference<T> = Rc<RefCell<T>>;
+
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionReference {
+    assembly_index: u32,
+    function_index: u32
+}
+
+#[derive(Debug)]
+pub struct Model {
+    property_names: Vec<String>,
+    functions: Vec<FunctionReference>
+}
+
+#[derive(Debug)]
+pub struct Instance {
+    model: Reference<Model>,
+    properties: HashMap<String, Object>
+}
+
 #[derive(Clone)]
 pub enum Object {
     Integer(i64),
@@ -14,10 +32,9 @@ pub enum Object {
     Null,
 
     // reference types
-    Map(Rc<RefCell<HashMap<String, Slot>>>),
-    Array(Rc<RefCell<Vec<Slot>>>),
-    Closure(Rc<ClosureData>),
-    NativeFunction(NativeFunction)
+    Model(Reference<Model>),
+    Instance(Reference<Instance>),
+    Array(Reference<Vec<Object>>)
 }
 
 impl fmt::Debug for Object {
@@ -30,20 +47,8 @@ impl fmt::Debug for Object {
             Object::String(value) => struct_format.field("String", value),
             Object::Boolean(value) => struct_format.field("Boolean", value),
             Object::Null => struct_format.field("Null", &"Null".to_string()),
-            Object::Map(value) => struct_format.field("Map", value),
-            Object::Array(value) => struct_format.field("Array", value),
-            Object::Closure(value) => struct_format.field("Closure", value),
-            Object::NativeFunction(_) => struct_format.field("NativeFunction", &"".to_string())
+
+            _ => struct_format.field("Unknown", &"Unknown".to_string())
         }.finish()
     }
-}
-
-pub type Slot = Rc<RefCell<Object>>;
-
-#[derive(Debug, Clone)]
-pub struct ClosureData {
-    pub assembly_index: usize,
-    pub function_index: usize,
-    // key is local index
-    pub free_variables: HashMap<usize, Slot>
 }

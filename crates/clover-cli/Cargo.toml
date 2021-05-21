@@ -8,7 +8,9 @@ repository = "https://github.com/ippan/clover"
 keywords = [ "language", "scripting" ]
 description = "A command line interface for Clover."
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "clover"
+path = "src/main.rs"
 
 [dependencies]
 clover = { path = "../clover" }

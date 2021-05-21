@@ -1,70 +1,15 @@
-use clover::parser::Parser;
-use clover::compiler::Compiler;
-use clover::runtime::state::State;
+use clover::frontend::parser::parse;
 use std::fs::read_to_string;
-use std::env;
-use clover::runtime::object::{Object, Slot};
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::ops::Deref;
-
-fn print(_: &mut State, parameters: &[Slot]) -> Result<Object, String> {
-    for slot in parameters {
-        println!("{:?}", slot.borrow().deref());
-    };
-
-    Ok(Object::Null)
-}
 
 fn main() {
-    let arg: Vec<String> = env::args().collect();
-
-    if arg.len() < 2 {
-        println!("usage:\n\t./clover-cli [file]");
-        return;
-    };
-
-    let filename = arg.get(1).unwrap();
+    let filename = "examples/test.luck";
 
     let source = read_to_string(filename).unwrap();
 
-    let mut parser = Parser::new();
+    let result = parse(source.as_str(), filename);
 
-    let program_result = parser.parse(source, "main".to_string());
-
-    match program_result {
-        Ok(program) => {
-            println!("{:?}", program);
-
-            let mut compiler = Compiler::new();
-
-            let assembly_result = compiler.compile(&program);
-
-            match assembly_result {
-                Ok(assembly) => {
-                    println!("{:?}", assembly);
-
-                    let mut state = State::new();
-
-                    state.add_global("ab".to_string(), Object::Integer(100));
-
-                    state.add_global_function("print".to_string(), print);
-
-                    state.add_assembly(assembly);
-
-                    let object = state.execute(0);
-
-                    println!("{:?}", object);
-                },
-                Err(error) => {
-                    println!("{:?}", error);
-                }
-            }
-        },
-        Err(error) => {
-            println!("{:?}", error);
-        }
+    match result {
+        Ok(program) => println!("{:?}", program),
+        Err(compile_error_list) => println!("{:?}", compile_error_list)
     }
-
-
 }

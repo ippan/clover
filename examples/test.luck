@@ -1,33 +1,34 @@
+include World, Power as Game from "world"
 
-a = 1
-b = 2
-local c = a
-
-local modify = function()
-    a = 10
+model Hello
+  a
+  b
+  c
 end
 
-local my_function = function(value)
-    a + b + c + ab + value
+model GoGo
+
 end
 
-b = 20
+function print(gg, yy)
 
-c = 3
+end
 
-modify()
+local g, d
 
-print(a, b, c, ab)
+implement GoGo
+  function go()
+    local a = 1, b = 2
 
-local gg = class
-    a = 10
-
-    yy = function()
-        100
+    if a == 1
+        a += 10
+    else
+        a -= 5
     end
 
+    1 + 1 * 2
+    return
+  end
 end
 
-print(gg)
-
-return my_function(gg.yy())
+apply Hello to Hello

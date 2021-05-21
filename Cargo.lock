@@ -8,6 +8,5 @@ version = "0.0.1"
 name = "clover-cli"
 version = "0.0.1"
 dependencies = [
- "clover 0.0.1",
+ "clover",
 ]
-

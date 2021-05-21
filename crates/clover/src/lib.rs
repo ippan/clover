@@ -1,4 +1,12 @@
+pub mod frontend;
+pub mod intermediate;
+pub mod backend;
 pub mod runtime;
-pub mod ast;
-pub mod parser;
-pub mod compiler;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+}

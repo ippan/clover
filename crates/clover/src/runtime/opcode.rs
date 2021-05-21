@@ -3,6 +3,7 @@ use std::fmt;
 #[derive(Copy, Clone)]
 pub struct Instruction(u64);
 
+
 #[derive(Debug, Copy, Clone)]
 pub enum OpCode {
     Pop             = 0x01,
@@ -16,19 +17,18 @@ pub enum OpCode {
     PushBoolean     = 0x04,
     Return          = 0x05,
 
-    // first byte of operand = 0 -> no need to pop (leave value at stack)
-    // first byte of operand > 0 -> pop after set
-    // operand without first byte -> index of local
+    // operand -> index of local
     LocalSet        = 0x06,
     // operand -> index of local
     LocalGet        = 0x07,
-    EnvironmentSet  = 0x08,
-    EnvironmentGet  = 0x09,
+    GlobalSet       = 0x08,
+    GlobalGet       = 0x09,
 
-    // operand = 0 -> return value
-    // operand = 1 -> return instance
     InstanceSet     = 0x0A,
     InstanceGet     = 0x0B,
+
+    ContextSet      = 0x0C,
+    ContextGet      = 0x0D,
 
     Add             = 0x21,
     Sub             = 0x22,
@@ -60,10 +60,12 @@ impl Instruction {
             0x05 => OpCode::Return,
             0x06 => OpCode::LocalSet,
             0x07 => OpCode::LocalGet,
-            0x08 => OpCode::EnvironmentSet,
-            0x09 => OpCode::EnvironmentGet,
+            0x08 => OpCode::GlobalSet,
+            0x09 => OpCode::GlobalGet,
             0x0A => OpCode::InstanceSet,
             0x0B => OpCode::InstanceGet,
+            0x0C => OpCode::ContextSet,
+            0x0D => OpCode::ContextGet,
 
             0x21 => OpCode::Add,
             0x22 => OpCode::Sub,
@@ -92,7 +94,6 @@ impl fmt::Debug for Instruction {
             .finish()
     }
 }
-
 
 impl OpCode {
     pub fn to_instruction(&self, operand: u64) -> Instruction {
