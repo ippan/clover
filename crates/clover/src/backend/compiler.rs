@@ -1,9 +1,9 @@
 use crate::runtime::assembly::Assembly;
-use crate::intermediate::CompileErrorList;
+use crate::intermediate::{CompileErrorList, TokenValue};
 use crate::runtime::object::Object;
 use std::collections::HashMap;
 use crate::runtime::opcode::Instruction;
-use crate::intermediate::ast::Document;
+use crate::intermediate::ast::{Document, Definition};
 
 const MAX_LOCALS: usize = 65536;
 
@@ -49,22 +49,63 @@ impl FunctionState {
 }
 
 pub struct CompilerState {
-    pub assembly: Assembly,
-    pub constants: Vec<Object>
-
+    pub assembly_index: u32,
+    pub constants: Vec<Object>,
+    pub locals: Scope,
+    pub errors: CompileErrorList
 }
 
+impl CompilerState {
+    fn define_local(&mut self, name: &str) {
+        let index = self.locals.len();
+        self.locals.insert(name.to_string(), index);
+    }
 
+    fn compile_definition(&mut self, definition: &Definition) {
+        match definition {
+            Definition::Local(local_definition) => {
+                for token in local_definition.variables.iter() {
+                    if let TokenValue::Identifier(name) = &token.value {
+                        self.define_local(name);
+                    }
+                };
+            },
+            _ => {}
+        }
+    }
 
+    fn compile(&mut self, document: &Document) {
+        for definition in document.definitions.iter() {
+            self.compile_definition(definition);
+        }
+    }
+
+    fn to_assembly(&self, filename: &str) -> Result<Assembly, CompileErrorList> {
+        if self.errors.is_empty() {
+            let mut assembly = Assembly {
+                filename: filename.to_string(),
+                local_count: self.locals.len(),
+                constants: self.constants.clone()
+            };
+            Ok(assembly)
+        } else {
+            Err(self.errors.clone())
+        }
+    }
+}
 
 pub fn compile_document(document: &Document, assembly_index: u32) -> Result<Assembly, CompileErrorList> {
 
+    let mut state = CompilerState {
+        assembly_index,
+        constants: Vec::new(),
+        locals: Scope::new(),
+        errors: CompileErrorList::new(&document.filename)
+    };
 
+    state.compile(document);
 
-
-    Ok(Assembly {
-        filename: document.filename.clone()
-    })
+    state.to_assembly(document.filename.as_str())
 }
 
 pub fn compile() {

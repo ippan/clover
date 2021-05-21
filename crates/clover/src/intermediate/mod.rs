@@ -111,7 +111,7 @@ pub struct CompileError {
     pub message: String
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CompileErrorList {
     pub filename: String,
     pub errors: Vec<CompileError>
