@@ -9,6 +9,7 @@ pub struct Function {
 #[derive(Debug)]
 pub struct Assembly {
     pub filename: String,
+    pub index: usize,
     pub local_count: usize,
     pub constants: Vec<Object>
 }

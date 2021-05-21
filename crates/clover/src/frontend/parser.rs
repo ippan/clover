@@ -662,8 +662,21 @@ impl<'a> ParserState<'a> {
     fn parse_definitions(&mut self) -> Vec<Definition> {
         let mut definitions = Vec::new();
 
+        let mut include_definitions_ended = false;
+
         while self.current_token.value != TokenValue::Eof && self.current_token.value != TokenValue::None {
+            let current_token = self.current_token.clone();
+
             if let Some(definition) = self.parse_definition() {
+
+                if let Definition::Include(_) = definition {
+                    if include_definitions_ended {
+                        self.push_error(&current_token, "include definition must at the top of files".to_string());
+                    } else {
+                        include_definitions_ended = true;
+                    };
+                };
+
                 definitions.push(definition);
             };
         };

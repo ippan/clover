@@ -1,4 +1,6 @@
-use crate::intermediate::Token;
+use crate::intermediate::{Token, TokenValue};
+use std::env;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub enum Expression {
@@ -153,4 +155,27 @@ pub struct ReturnStatement {
 pub struct Document {
     pub definitions: Vec<Definition>,
     pub filename: String
+}
+
+impl Document {
+    pub fn get_dependencies(&self) -> Vec<String> {
+        let mut filenames = Vec::new();
+
+        let path = env::current_dir().unwrap();
+
+        let mut definition_iterator = self.definitions.iter();
+        while let Some(Definition::Include(definition)) = definition_iterator.next() {
+            let mut current_path = PathBuf::from(&self.filename);
+            current_path.pop();
+
+            if let TokenValue::String(filename) = &definition.filename.value {
+                current_path.push(filename);
+                if let Ok(include_path) = current_path.canonicalize() {
+                    filenames.push(include_path.strip_prefix(&path).unwrap().to_str().unwrap().to_string());
+                }
+            };
+        };
+
+        filenames
+    }
 }

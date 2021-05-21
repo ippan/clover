@@ -4,6 +4,7 @@ use crate::runtime::object::Object;
 use std::collections::HashMap;
 use crate::runtime::opcode::Instruction;
 use crate::intermediate::ast::{Document, Definition};
+use crate::runtime::program::Assemblies;
 
 const MAX_LOCALS: usize = 65536;
 
@@ -49,7 +50,7 @@ impl FunctionState {
 }
 
 pub struct CompilerState {
-    pub assembly_index: u32,
+    pub assembly_index: usize,
     pub constants: Vec<Object>,
     pub locals: Scope,
     pub errors: CompileErrorList
@@ -74,6 +75,10 @@ impl CompilerState {
         }
     }
 
+    fn include_dependencies(&mut self, assemblies: &Assemblies) {
+
+    }
+
     fn compile(&mut self, document: &Document) {
         for definition in document.definitions.iter() {
             self.compile_definition(definition);
@@ -85,7 +90,8 @@ impl CompilerState {
             let mut assembly = Assembly {
                 filename: filename.to_string(),
                 local_count: self.locals.len(),
-                constants: self.constants.clone()
+                constants: self.constants.clone(),
+                index: self.assembly_index
             };
             Ok(assembly)
         } else {
@@ -94,7 +100,7 @@ impl CompilerState {
     }
 }
 
-pub fn compile_document(document: &Document, assembly_index: u32) -> Result<Assembly, CompileErrorList> {
+pub fn compile_document(document: &Document, assembly_index: usize, assemblies: &Assemblies) -> Result<Assembly, CompileErrorList> {
 
     let mut state = CompilerState {
         assembly_index,
@@ -103,6 +109,7 @@ pub fn compile_document(document: &Document, assembly_index: u32) -> Result<Asse
         errors: CompileErrorList::new(&document.filename)
     };
 
+    state.include_dependencies(assemblies);
     state.compile(document);
 
     state.to_assembly(document.filename.as_str())

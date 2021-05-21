@@ -1,4 +1,4 @@
-include World, Power as Game from "world"
+include World, Power as Game from "./test.luck"
 
 model Hello
   a
