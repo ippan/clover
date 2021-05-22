@@ -1,10 +1,13 @@
 use crate::runtime::assembly::Assembly;
-use crate::intermediate::{CompileErrorList, TokenValue};
+use crate::intermediate::{CompileErrorList, TokenValue, CompileError, Token, Position};
 use crate::runtime::object::Object;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use crate::runtime::opcode::Instruction;
 use crate::intermediate::ast::{Document, Definition};
-use crate::runtime::program::Assemblies;
+use crate::runtime::program::{Assemblies, Program};
+use crate::backend::dependency_solver::DependencySolver;
+use crate::frontend::parser::parse;
+use std::fs::read_to_string;
 
 const MAX_LOCALS: usize = 65536;
 
@@ -115,6 +118,32 @@ pub fn compile_document(document: &Document, assembly_index: usize, assemblies: 
     state.to_assembly(document.filename.as_str())
 }
 
-pub fn compile() {
+pub fn compile_to(program: &mut Program, source: &str, filename: &str) -> Result<(), CompileErrorList> {
+    let mut dependency_solver = DependencySolver::new();
 
+    let document = parse(&source, filename)?;
+
+    dependency_solver.solve(&document, &program.assemblies);
+
+    Ok(())
+}
+
+pub fn compile_file(filename: &str) -> Result<Program, CompileErrorList> {
+    if let Ok(source) = read_to_string(filename) {
+        compile(&source, filename)
+    } else {
+        let mut errors = CompileErrorList::new(filename);
+        errors.push_error(Token::new(TokenValue::None, Position::none()), "can not open source file");
+        Err(errors)
+    }
+}
+
+pub fn compile(source: &str, filename: &str) -> Result<Program, CompileErrorList> {
+    let mut program = Program {
+        assemblies: Assemblies::new()
+    };
+
+    compile_to(&mut program, &source, filename)?;
+
+    Ok(program)
 }

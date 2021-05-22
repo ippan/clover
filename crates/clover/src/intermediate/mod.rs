@@ -129,6 +129,13 @@ impl CompileErrorList {
         self.errors.push(error);
     }
 
+    pub fn push_error(&mut self, token: Token, message: &str) {
+        self.push(CompileError {
+            token,
+            message: message.to_string()
+        });
+    }
+
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }

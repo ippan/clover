@@ -161,7 +161,7 @@ impl Document {
     pub fn get_dependencies(&self) -> Vec<String> {
         let mut filenames = Vec::new();
 
-        let path = env::current_dir().unwrap();
+        let path = env::current_dir().unwrap().canonicalize().unwrap();
 
         let mut definition_iterator = self.definitions.iter();
         while let Some(Definition::Include(definition)) = definition_iterator.next() {
@@ -171,7 +171,8 @@ impl Document {
             if let TokenValue::String(filename) = &definition.filename.value {
                 current_path.push(filename);
                 if let Ok(include_path) = current_path.canonicalize() {
-                    filenames.push(include_path.strip_prefix(&path).unwrap().to_str().unwrap().to_string());
+                    let stripped_filename = include_path.strip_prefix(&path).unwrap().to_str().unwrap().to_string();
+                    filenames.push(stripped_filename.replace("\\", "/"));
                 }
             };
         };

@@ -1,21 +1,15 @@
 use clover::frontend::parser::parse;
 use std::fs::read_to_string;
-use clover::backend::compiler::compile_document;
+use clover::backend::compiler::{compile_document, compile_file};
 use std::collections::HashMap;
 use clover::runtime::program::Assemblies;
 
 fn main() {
-    let filename = "examples/test.luck";
-
-    let source = read_to_string(filename).unwrap();
-
-    let result = parse(source.as_str(), filename);
+    let result = compile_file("examples/test.luck");
 
     match result {
-        Ok(document) => {
-            println!("{:?}", document.get_dependencies());
-            let result = compile_document(&document, 0, &Assemblies::new());
-            println!("{:?}", result);
+        Ok(program) => {
+            println!("{:?}", program);
         },
         Err(compile_error_list) => println!("{:?}", compile_error_list)
     }

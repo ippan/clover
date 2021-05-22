@@ -13,8 +13,3 @@ pub struct Assembly {
     pub local_count: usize,
     pub constants: Vec<Object>
 }
-
-#[derive(Debug)]
-pub struct Program {
-
-}
