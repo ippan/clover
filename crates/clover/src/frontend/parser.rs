@@ -471,6 +471,7 @@ impl<'a> ParserState<'a> {
         // parse parameters
         let mut parameters = Vec::new();
         let mut last_comma = None;
+
         while self.current_token.value != TokenValue::RightParentheses {
             last_comma = None;
 
@@ -637,7 +638,7 @@ impl<'a> ParserState<'a> {
         self.next_token();
 
         Some(Definition::Include(IncludeDefinition {
-            models,
+            public_names: models,
             aliases,
             filename
         }))

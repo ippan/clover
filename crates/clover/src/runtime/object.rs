@@ -5,21 +5,9 @@ use std::collections::HashMap;
 
 pub type Reference<T> = Rc<RefCell<T>>;
 
-#[derive(Copy, Clone, Debug)]
-pub struct FunctionReference {
-    assembly_index: u32,
-    function_index: u32
-}
-
-#[derive(Debug)]
-pub struct Model {
-    property_names: Vec<String>,
-    functions: Vec<FunctionReference>
-}
-
 #[derive(Debug)]
 pub struct Instance {
-    model: Reference<Model>,
+    model_index: usize,
     properties: HashMap<String, Object>
 }
 
@@ -31,10 +19,13 @@ pub enum Object {
     Boolean(bool),
     Null,
 
+    Function(usize),
+    InstanceFunction(Box<Object>, usize),
+    Model(usize),
+
     // reference types
-    Model(Reference<Model>),
     Instance(Reference<Instance>),
-    Array(Reference<Vec<Object>>)
+    Array(Reference<Vec<Object>>),
 }
 
 impl fmt::Debug for Object {

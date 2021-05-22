@@ -1,3 +1,5 @@
+use std::process::id;
+
 pub mod ast;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -71,6 +73,22 @@ pub enum TokenValue {
     None
 }
 
+impl TokenValue {
+    pub fn to_string(&self) -> String {
+        match self {
+            TokenValue::Identifier(value) => value.clone(),
+            TokenValue::String(value) => value.clone(),
+            TokenValue::Integer(value) => value.to_string(),
+            TokenValue::Float(value) => value.to_string(),
+            TokenValue::Null => "Null".to_string(),
+            TokenValue::True => "true".to_string(),
+            TokenValue::False => "false".to_string(),
+
+            _ => format!("{:?}", self)
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Position {
     pub line: u16,
@@ -129,9 +147,9 @@ impl CompileErrorList {
         self.errors.push(error);
     }
 
-    pub fn push_error(&mut self, token: Token, message: &str) {
+    pub fn push_error(&mut self, token: &Token, message: &str) {
         self.push(CompileError {
-            token,
+            token: token.clone(),
             message: message.to_string()
         });
     }

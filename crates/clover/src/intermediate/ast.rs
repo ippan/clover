@@ -130,7 +130,7 @@ pub struct LocalDefinition {
 
 #[derive(Clone, Debug)]
 pub struct IncludeDefinition {
-    pub models: Vec<Token>,
+    pub public_names: Vec<Token>,
     pub aliases: Vec<Token>,
     pub filename: Token
 }
