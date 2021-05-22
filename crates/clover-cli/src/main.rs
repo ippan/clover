@@ -1,8 +1,5 @@
-use clover::frontend::parser::parse;
-use std::fs::read_to_string;
-use clover::backend::compiler::{compile_document, compile_file};
+use clover::backend::compiler::compile_file;
 use std::collections::HashMap;
-use clover::runtime::program::Assemblies;
 
 fn main() {
     let result = compile_file("examples/test.luck");

@@ -92,7 +92,9 @@ pub enum Definition {
     Apply(ApplyDefinition),
     Function(FunctionDefinition),
     Local(LocalDefinition),
-    Include(IncludeDefinition)
+    Include(IncludeDefinition),
+    PublicModel(ModelDefinition),
+    PublicFunction(FunctionDefinition)
 }
 
 #[derive(Clone, Debug)]

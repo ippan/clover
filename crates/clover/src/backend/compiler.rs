@@ -1,60 +1,70 @@
-use crate::runtime::assembly::Assembly;
-use crate::intermediate::{CompileErrorList, TokenValue, CompileError, Token, Position};
-use crate::runtime::object::Object;
 use std::collections::{HashMap, HashSet};
-use crate::runtime::opcode::Instruction;
-use crate::intermediate::ast::{Document, Definition};
-use crate::runtime::program::{Assemblies, Program};
-use crate::backend::dependency_solver::DependencySolver;
-use crate::frontend::parser::parse;
 use std::fs::read_to_string;
+
+use crate::backend::dependency_solver::DependencySolver;
+use crate::backend::function_state::Scope;
+use crate::frontend::parser::parse;
+use crate::intermediate::{CompileError, CompileErrorList, Position, Token, TokenValue};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition};
+use crate::runtime::object::Object;
+use crate::runtime::opcode::Instruction;
+use crate::runtime::program::Program;
+use crate::backend::assembly_state::AssemblyState;
 
 const MAX_LOCALS: usize = 65536;
 
-type Scope = HashMap<String, usize>;
-
-struct FunctionState {
-    is_instance: bool,
-    parameter_count: u16,
-    local_count: usize,
-    scopes: Vec<Scope>,
-    instructions: Vec<Instruction>
-}
-
-impl FunctionState {
-    fn find_local(&self, name: &str) -> Option<usize> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(&index) = scope.get(name) {
-                return Some(index);
-            };
-        }
-
-        None
-    }
-
-    fn enter_scope(&mut self) {
-        self.scopes.push(Scope::new());
-    }
-
-    fn exit_scope(&mut self) {
-        self.scopes.pop();
-    }
-
-    fn define_local(&mut self, name: &str) -> usize {
-        if let Some(scope) = self.scopes.last_mut() {
-            let index = self.local_count;
-            scope.insert(name.to_string(), index);
-            self.local_count += 1;
-            index
-        } else {
-            panic!("must not be reach here");
-        }
-    }
-}
-
-pub struct CompilerState {
-    pub assembly_index: usize,
+#[derive(Debug)]
+pub struct Context {
     pub constants: Vec<Object>,
+    pub local_count: usize,
+    pub assemblies: HashMap<String, AssemblyState>
+}
+
+impl Context {
+    pub fn new() -> Context {
+        Context {
+            constants: Vec::new(),
+            local_count: 0,
+            assemblies: HashMap::new()
+        }
+    }
+
+    pub fn find_assembly(&self, name: &str) -> Option<&AssemblyState> {
+        if let Some(assembly_state) = self.assemblies.get(name) {
+            Some(assembly_state)
+        } else {
+            None
+        }
+    }
+
+    pub fn assembly_exists(&self, name: &str) -> bool {
+        self.find_assembly(name).is_some()
+    }
+
+    pub fn add_assembly(&mut self, assembly: AssemblyState) {
+        self.assemblies.insert(assembly.filename.clone(), assembly);
+    }
+
+    pub fn get_loaded_assemblies(&self) -> HashSet<String> {
+        let mut loaded_assemblies = HashSet::new();
+
+        for (filename, _) in self.assemblies.iter() {
+            loaded_assemblies.insert(filename.clone());
+        };
+
+        loaded_assemblies
+    }
+
+    pub fn to_program(&self) -> Program {
+        Program {
+
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CompilerState {
+    pub assembly_state: AssemblyState,
     pub locals: Scope,
     pub errors: CompileErrorList
 }
@@ -63,6 +73,10 @@ impl CompilerState {
     fn define_local(&mut self, name: &str) {
         let index = self.locals.len();
         self.locals.insert(name.to_string(), index);
+    }
+
+    fn compile_include_definition(&mut self, include_definition: IncludeDefinition) {
+
     }
 
     fn compile_definition(&mut self, definition: &Definition) {
@@ -78,59 +92,70 @@ impl CompilerState {
         }
     }
 
-    fn include_dependencies(&mut self, assemblies: &Assemblies) {
-
-    }
-
     fn compile(&mut self, document: &Document) {
         for definition in document.definitions.iter() {
             self.compile_definition(definition);
         }
     }
-
-    fn to_assembly(&self, filename: &str) -> Result<Assembly, CompileErrorList> {
-        if self.errors.is_empty() {
-            let mut assembly = Assembly {
-                filename: filename.to_string(),
-                local_count: self.locals.len(),
-                constants: self.constants.clone(),
-                index: self.assembly_index
-            };
-            Ok(assembly)
-        } else {
-            Err(self.errors.clone())
-        }
-    }
 }
 
-pub fn compile_document(document: &Document, assembly_index: usize, assemblies: &Assemblies) -> Result<Assembly, CompileErrorList> {
+pub fn compile_document(document: &Document, context: &mut Context) -> Result<(), CompileErrorList> {
 
     let mut state = CompilerState {
-        assembly_index,
-        constants: Vec::new(),
+        assembly_state: AssemblyState::new(&document.filename),
         locals: Scope::new(),
         errors: CompileErrorList::new(&document.filename)
     };
 
-    state.include_dependencies(assemblies);
     state.compile(document);
 
-    state.to_assembly(document.filename.as_str())
-}
-
-pub fn compile_to(program: &mut Program, source: &str, filename: &str) -> Result<(), CompileErrorList> {
-    let mut dependency_solver = DependencySolver::new();
-
-    let document = parse(&source, filename)?;
-
-    dependency_solver.solve(&document, &program.assemblies);
 
     Ok(())
 }
 
-pub fn compile_file(filename: &str) -> Result<Program, CompileErrorList> {
+pub fn compile_to(context: &mut Context, source: &str, filename: &str) -> Result<(), CompileErrorList> {
+    let mut documents: HashMap<String, Document> = HashMap::new();
+
+    let mut dependency_solver = DependencySolver::new();
+
+    let document = parse(&source, filename)?;
+
+    let loaded_assemblies = context.get_loaded_assemblies();
+
+    dependency_solver.solve(&document, &loaded_assemblies);
+
+    documents.insert(document.filename.clone(), document);
+
+    while let Some(dependency_filename) = dependency_solver.get_unsolved_filename() {
+        let dependency_source = load_file(&dependency_filename)?;
+        let dependency_document = parse(&dependency_source, &dependency_filename)?;
+
+        dependency_solver.solve(&dependency_document, &loaded_assemblies);
+        documents.insert(dependency_filename, dependency_document);
+    }
+
+    while let Some(filename_to_compile) = dependency_solver.get_next_no_dependency_filename() {
+        let document_to_compile = documents.get(&filename_to_compile).unwrap();
+
+        compile_document(document_to_compile, context)?;
+
+        dependency_solver.set_loaded(&filename_to_compile);
+    }
+
+    if !dependency_solver.is_empty() {
+        let mut errors = CompileErrorList::new(filename);
+        let cycle_filenames = dependency_solver.get_cycle_reference_list().join(", ");
+
+        errors.push_error(Token::new(TokenValue::None, Position::none()), &format!("there may have cycle reference in this files [{}]", cycle_filenames));
+        return Err(errors);
+    };
+
+    Ok(())
+}
+
+fn load_file(filename: &str) -> Result<String, CompileErrorList> {
     if let Ok(source) = read_to_string(filename) {
-        compile(&source, filename)
+        Ok(source)
     } else {
         let mut errors = CompileErrorList::new(filename);
         errors.push_error(Token::new(TokenValue::None, Position::none()), "can not open source file");
@@ -138,12 +163,16 @@ pub fn compile_file(filename: &str) -> Result<Program, CompileErrorList> {
     }
 }
 
+pub fn compile_file(filename: &str) -> Result<Program, CompileErrorList> {
+    let source = load_file(filename)?;
+
+    compile(&source, filename)
+}
+
 pub fn compile(source: &str, filename: &str) -> Result<Program, CompileErrorList> {
-    let mut program = Program {
-        assemblies: Assemblies::new()
-    };
+    let mut context = Context::new();
 
-    compile_to(&mut program, &source, filename)?;
+    compile_to(&mut context, &source, filename)?;
 
-    Ok(program)
+    Ok(context.to_program())
 }

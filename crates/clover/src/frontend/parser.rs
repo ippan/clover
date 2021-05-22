@@ -643,6 +643,31 @@ impl<'a> ParserState<'a> {
         }))
     }
 
+    fn parse_public_definition(&mut self) -> Option<Definition> {
+        self.expect_and_pop_token(TokenValue::Public);
+
+        match self.current_token.value {
+            TokenValue::Model => {
+                if let Some(Definition::Model(model_definition)) = self.parse_model_definition() {
+                    Some(Definition::PublicModel(model_definition))
+                } else {
+                    None
+                }
+            },
+            TokenValue::Function => {
+                if let Some(Definition::Function(function_definition)) = self.parse_function_definition() {
+                    Some(Definition::PublicFunction(function_definition))
+                } else {
+                    None
+                }
+            },
+            _ => {
+                self.push_error(&self.current_token.clone(), "Unexpect token".to_string());
+                None
+            }
+        }
+    }
+
     fn parse_definition(&mut self) -> Option<Definition> {
         match self.current_token.value {
             TokenValue::Model => self.parse_model_definition(),
@@ -651,6 +676,7 @@ impl<'a> ParserState<'a> {
             TokenValue::Apply => self.parse_apply_definition(),
             TokenValue::Include => self.parse_include_definition(),
             TokenValue::Local => self.parse_local_definition(),
+            TokenValue::Public => self.parse_public_definition(),
             _ => {
                 self.push_error(&self.current_token.clone(), format!("Unexcpet token [{:?}]", self.current_token.clone()));
                 self.skip_until(&[ TokenValue::Include, TokenValue::Public, TokenValue::Model, TokenValue::Implement, TokenValue::Apply, TokenValue::Local, TokenValue::Function ]);
@@ -672,9 +698,9 @@ impl<'a> ParserState<'a> {
                 if let Definition::Include(_) = definition {
                     if include_definitions_ended {
                         self.push_error(&current_token, "include definition must at the top of files".to_string());
-                    } else {
-                        include_definitions_ended = true;
                     };
+                } else {
+                    include_definitions_ended = true;
                 };
 
                 definitions.push(definition);

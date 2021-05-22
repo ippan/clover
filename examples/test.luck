@@ -1,6 +1,7 @@
-include World, Power as Game from "./test.luck"
+include Hello as Game from "./hello.luck"
+include World as GG from "./world.luck"
 
-model Hello
+model Hello2
   a
   b
   c
