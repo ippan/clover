@@ -5,11 +5,12 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::Scope;
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileError, CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::Instruction;
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
+use std::os::raw::c_long;
 
 const MAX_LOCALS: usize = 65536;
 
@@ -33,6 +34,20 @@ impl CompilerContext {
             local_count: 0,
             assemblies: HashMap::new(),
             local_values: HashMap::new()
+        }
+    }
+
+    pub fn get_local_value(&self, local_index: usize) -> Option<Object> {
+        if !self.local_values.contains_key(&local_index) {
+            return None;
+        };
+
+        let &constant_index = self.local_values.get(&local_index).unwrap();
+
+        if let Some(object) = self.constants.get(constant_index) {
+            Some(object.clone())
+        } else {
+            None
         }
     }
 
@@ -201,6 +216,59 @@ impl CompilerState {
         self.assembly_state.public_indices.insert(function_definition.name.value.to_string(), constant_index);
     }
 
+    fn find_model_index_by_local_name(&mut self, context: &mut CompilerContext, token: &Token) -> Option<usize> {
+        if let Some(&model_local_index) = self.locals.get(&token.value.to_string()) {
+            if let Some(Object::Model(model_index)) = context.get_local_value(model_local_index) {
+                return Some(model_index);
+            } else {
+                self.errors.push_error(token, "is not a model");
+            }
+        } else {
+            self.errors.push_error(token, "can not found model");
+        }
+
+        None
+    }
+
+    fn compile_implement_definition(&mut self, context: &mut CompilerContext, implement_definition: &ImplementDefinition) {
+        let mut functions: HashMap<String, usize> = HashMap::new();
+
+        for function_definition in implement_definition.functions.iter() {
+            let function = self.compile_function_definition_base(context, function_definition);
+            let index = context.add_function(function);
+
+            functions.insert(function_definition.name.value.to_string(), index);
+        }
+
+        if let Some(model_index) = self.find_model_index_by_local_name(context, &implement_definition.model_name) {
+            let model = context.models.get_mut(model_index).unwrap();
+
+            for (name, index) in functions {
+                model.functions.insert(name, index);
+            };
+        }
+    }
+
+    fn compile_apply_definition(&mut self, context: &mut CompilerContext, apply_definition: &ApplyDefinition) {
+        let mut functions = HashMap::new();
+
+        if let Some(model_index) = self.find_model_index_by_local_name(context, &apply_definition.source_model) {
+            let model = context.models.get(model_index).unwrap();
+
+            for (name, &index) in model.functions.iter() {
+                functions.insert(name.clone(), index);
+            };
+        };
+
+        if let Some(model_index) = self.find_model_index_by_local_name(context, &apply_definition.target_model) {
+            let model = context.models.get_mut(model_index).unwrap();
+
+            for (name, index) in functions{
+                model.functions.insert(name, index);
+            };
+        };
+    }
+
     fn compile_definition(&mut self, context: &mut CompilerContext, definition: &Definition) {
         match definition {
             Definition::Local(local_definition) => {
@@ -213,7 +281,8 @@ impl CompilerState {
             Definition::PublicModel(model_definition) => self.compile_public_model_definition(context, model_definition),
             Definition::Function(function_definition) => { self.compile_function_definition(context, function_definition); },
             Definition::PublicFunction(function_definition) => self.compile_public_function_definition(context, function_definition),
-            _ => {}
+            Definition::Implement(implement_definition) => self.compile_implement_definition(context, implement_definition),
+            Definition::Apply(apply_definition) => self.compile_apply_definition(context, apply_definition)
         }
     }
 
@@ -236,7 +305,11 @@ pub fn compile_document(document: &Document, context: &mut CompilerContext) -> R
 
     context.add_assembly(state.assembly_state);
 
-    Ok(())
+    if state.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(state.errors)
+    }
 }
 
 pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str) -> Result<(), CompileErrorList> {

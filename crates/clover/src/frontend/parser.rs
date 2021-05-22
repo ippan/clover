@@ -711,11 +711,15 @@ impl<'a> ParserState<'a> {
         definitions
     }
 
-    fn parse_program(&mut self, filename: String) -> Document {
-        Document {
+    fn parse_document(&mut self, filename: String) -> Document {
+        let mut document = Document {
             definitions: self.parse_definitions(),
             filename
-        }
+        };
+
+        document.normalize_include_paths();
+
+        document
     }
 }
 
@@ -732,10 +736,10 @@ pub fn parse(source: &str, filename: &str) -> Result<Document, CompileErrorList>
     state.next_token();
     state.next_token();
 
-    let program = state.parse_program(filename.to_string());
+    let document = state.parse_document(filename.to_string());
 
     if state.errors.is_empty() {
-        Ok(program)
+        Ok(document)
     } else {
         Err(state.errors)
     }

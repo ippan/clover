@@ -1,4 +1,9 @@
 
 public model World
+    world
+end
 
+implement World
+  function world_function()
+  end
 end

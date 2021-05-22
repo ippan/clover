@@ -160,12 +160,10 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn get_dependencies(&self) -> Vec<String> {
-        let mut filenames = Vec::new();
-
+    pub fn normalize_include_paths(&mut self) {
         let path = env::current_dir().unwrap().canonicalize().unwrap();
 
-        let mut definition_iterator = self.definitions.iter();
+        let mut definition_iterator = self.definitions.iter_mut();
         while let Some(Definition::Include(definition)) = definition_iterator.next() {
             let mut current_path = PathBuf::from(&self.filename);
             current_path.pop();
@@ -174,8 +172,19 @@ impl Document {
                 current_path.push(filename);
                 if let Ok(include_path) = current_path.canonicalize() {
                     let stripped_filename = include_path.strip_prefix(&path).unwrap().to_str().unwrap().to_string();
-                    filenames.push(stripped_filename.replace("\\", "/"));
+                    definition.filename.value = TokenValue::String(stripped_filename.replace("\\", "/"));
                 }
+            };
+        };
+    }
+
+    pub fn get_dependencies(&self) -> Vec<String> {
+        let mut filenames = Vec::new();
+
+        let mut definition_iterator = self.definitions.iter();
+        while let Some(Definition::Include(definition)) = definition_iterator.next() {
+            if let TokenValue::String(filename) = &definition.filename.value {
+                    filenames.push(filename.clone());
             };
         };
 

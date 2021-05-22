@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Model {
-    property_names: Vec<String>,
-    functions: HashMap<String, usize>
+    pub property_names: Vec<String>,
+    pub functions: HashMap<String, usize>
 }
 
 impl Model {
