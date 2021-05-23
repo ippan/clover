@@ -5,13 +5,13 @@ use std::collections::HashMap;
 
 pub type Reference<T> = Rc<RefCell<T>>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Instance {
     model_index: usize,
     properties: HashMap<String, Object>
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Object {
     Integer(i64),
     Float(f64),

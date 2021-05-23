@@ -4,7 +4,7 @@ use std::fmt;
 pub struct Instruction(u64);
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OpCode {
     Pop             = 0x01,
 

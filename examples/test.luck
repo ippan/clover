@@ -1,37 +1,4 @@
-include Hello as Game from "./hello.luck"
-include World from "./world.luck"
 
-model Hello2
-  a
-  b
-  c
+function main()
+    false
 end
-
-model GoGo
-
-end
-
-function print(gg, yy)
-
-end
-
-local g, d
-
-implement GoGo
-  function go()
-    local a = 1, b = 2
-
-    if a == 1
-        a += 10
-    else
-        a -= 5
-    end
-
-    1 + 1 * 2
-    return
-  end
-end
-
-apply GoGo to Hello2
-apply Hello2 to Game
-apply World to Hello2

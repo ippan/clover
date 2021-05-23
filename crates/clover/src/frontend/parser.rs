@@ -130,6 +130,17 @@ impl<'a> ParserState<'a> {
         Some(Expression::Float(FloatExpression { token }))
     }
 
+    fn parse_string_expression(&mut self) -> Option<Expression> {
+        if !self.expect_token(TokenValue::String("".to_string())) {
+            return None;
+        };
+
+        let token = self.current_token.clone();
+        self.next_token();
+
+        Some(Expression::String(StringExpression { token }))
+    }
+
     fn parse_boolean_expression(&mut self) -> Option<Expression> {
         let token = self.current_token.clone();
         self.next_token();
@@ -219,6 +230,7 @@ impl<'a> ParserState<'a> {
             TokenValue::Identifier(_) => self.parse_identifier_expression(),
             TokenValue::Integer(_) => self.parse_integer_expression(),
             TokenValue::Float(_) => self.parse_float_expression(),
+            TokenValue::String(_) => self.parse_string_expression(),
             TokenValue::True | TokenValue::False => self.parse_boolean_expression(),
             TokenValue::This | TokenValue::Null => self.parse_keyword_expression(),
             TokenValue::Minus | TokenValue::Not => self.parse_prefix_expression(),
@@ -475,7 +487,12 @@ impl<'a> ParserState<'a> {
         while self.current_token.value != TokenValue::RightParentheses {
             last_comma = None;
 
-            if !self.expect_token(TokenValue::Identifier("".to_string())) {
+            if parameters.len() == 0 {
+                if !self.current_token_is_any_of(&[ TokenValue::Identifier("".to_string()), TokenValue::This ]) {
+                    self.errors.push_error(&self.current_token.clone(), "Unexpect token");
+                    self.skip_until(&[ TokenValue::Identifier("".to_string()), TokenValue::This, TokenValue::Eof ]);
+                };
+            } else if !self.expect_token(TokenValue::Identifier("".to_string())) {
                 return None;
             };
 

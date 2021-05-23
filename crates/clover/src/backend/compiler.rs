@@ -2,18 +2,15 @@ use std::collections::{HashMap, HashSet};
 use std::fs::read_to_string;
 
 use crate::backend::dependency_solver::DependencySolver;
-use crate::backend::function_state::Scope;
+use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
-use crate::intermediate::{CompileError, CompileErrorList, Position, Token, TokenValue, Positions};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement};
+use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression};
 use crate::runtime::object::Object;
-use crate::runtime::opcode::Instruction;
+use crate::runtime::opcode::{OpCode};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
-use std::os::raw::c_long;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
-
-const MAX_LOCALS: usize = 65536;
 
 #[derive(Debug)]
 pub struct CompilerContext {
@@ -24,6 +21,8 @@ pub struct CompilerContext {
     pub local_count: usize,
     pub assemblies: HashMap<String, AssemblyState>,
     pub local_values: HashMap<usize, usize>,
+
+    pub entry_point: usize,
 
     pub file_info: FileInfo,
     pub debug_info: DebugInfo
@@ -39,9 +38,23 @@ impl CompilerContext {
             assemblies: HashMap::new(),
             local_values: HashMap::new(),
 
+            entry_point: 0,
+
             file_info: FileInfo::new(),
             debug_info: DebugInfo::new()
         }
+    }
+
+    pub fn add_constant(&mut self, object: Object) -> usize {
+        for (i, constant) in self.constants.iter().enumerate() {
+            if *constant == object {
+                return i;
+            };
+        };
+
+        let index = self.constants.len();
+        self.constants.push(object);
+        index
     }
 
     pub fn get_local_value(&self, local_index: usize) -> Option<Object> {
@@ -64,18 +77,21 @@ impl CompilerContext {
         index
     }
 
-    pub fn add_function(&mut self, function: Function, positions: Positions, name: &str, assembly_index: usize) -> usize {
+    pub fn add_function(&mut self, function_state: FunctionState, name: &str, assembly_index: usize) -> usize {
         let index = self.functions.len();
+
+        let function = Function {
+            parameter_count: function_state.parameter_count,
+            local_count: function_state.local_count,
+            is_instance: function_state.is_instance,
+
+            instructions: function_state.instructions
+        };
+
         self.functions.push(function);
-        self.debug_info.functions.push(positions);
+        self.debug_info.functions.push(function_state.positions);
         self.file_info.function_names.push(name.to_string());
         self.file_info.function_files.push(assembly_index);
-        index
-    }
-
-    pub fn add_constant(&mut self, object: Object) -> usize {
-        let index = self.constants.len();
-        self.constants.push(object);
         index
     }
 
@@ -120,17 +136,17 @@ impl CompilerContext {
 
     pub fn to_program(&self) -> Program {
         Program {
-            models: Vec::new(),
-            functions: Vec::new(),
-            constants: Vec::new(),
+            models: self.models.clone(),
+            functions: self.functions.clone(),
+            constants: self.constants.clone(),
 
-            local_count: 0,
-            local_values: HashMap::new(),
+            local_count: self.local_count,
+            local_values: self.local_values.clone(),
 
-            entry_point: 0,
+            entry_point: self.entry_point,
 
-            file_info: None,
-            debug_info: None
+            file_info: Some(self.file_info.clone()),
+            debug_info: Some(self.debug_info.clone())
         }
     }
 }
@@ -163,10 +179,65 @@ impl CompilerState {
         }
     }
 
-    fn compile_statement(&mut self, context: &mut CompilerContext, function: &mut Function, positions: &mut Positions, statement: &Statement) {
-        match statement {
-            Statement::Return(return_statement) => {},
+    fn compile_integer_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, integer_expression: &IntegerExpression) {
+        if let TokenValue::Integer(value) = integer_expression.token.value {
+            let index = context.add_constant(Object::Integer(value));
+            function_state.emit(OpCode::PushConstant.to_instruction(index as u64), integer_expression.token.position);
+        }
+    }
+
+    fn compile_float_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, float_expression: &FloatExpression) {
+        if let TokenValue::Float(value) = float_expression.token.value {
+            let index = context.add_constant(Object::Float(value));
+            function_state.emit(OpCode::PushConstant.to_instruction(index as u64), float_expression.token.position);
+        }
+    }
+
+    fn compile_string_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, string_expression: &StringExpression) {
+        if let TokenValue::String(value) = &string_expression.token.value {
+            let index = context.add_constant(Object::String(value.clone()));
+            function_state.emit(OpCode::PushConstant.to_instruction(index as u64), string_expression.token.position);
+        }
+    }
+
+    fn compile_boolean_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, bool_expression: &BooleanExpression) {
+        match bool_expression.token.value {
+            TokenValue::True => function_state.emit(OpCode::PushBoolean.to_instruction(1), bool_expression.token.position),
+            TokenValue::False => function_state.emit(OpCode::PushBoolean.to_instruction(0), bool_expression.token.position),
+            _ => self.errors.push_error(&bool_expression.token, "Unexpect token")
+        }
+    }
+
+    fn compile_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, expression: &Expression) {
+        match expression {
+            Expression::Integer(integer_expression) => self.compile_integer_expression(context, function_state, integer_expression),
+            Expression::Float(float_expression) => self.compile_float_expression(context, function_state, float_expression),
+            Expression::String(string_expression) => self.compile_string_expression(context, function_state, string_expression),
+            Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
+            Expression::Null(null_expression) => function_state.emit_opcode(OpCode::PushNull, null_expression.token.position),
             _ => {}
+        }
+    }
+
+    fn compile_statement(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, statement: &Statement) {
+        match statement {
+            Statement::Return(return_statement) => function_state.emit_return(return_statement.token.position),
+            Statement::Expression(expression) => {
+                self.compile_expression(context, function_state, expression);
+                function_state.emit_opcode_without_position(OpCode::Pop);
+            },
+            Statement::Local(local_statement) => {
+                for (i, token) in local_statement.variables.iter().enumerate() {
+                    if let Some(index) = function_state.define_local(&token.value.to_string()) {
+                        if let Some(expression) = local_statement.values.get(i).unwrap() {
+                            self.compile_expression(context, function_state, expression);
+                            function_state.emit(OpCode::LocalSet.to_instruction(index as u64), token.position);
+                        }
+                    } else {
+                        self.errors.push_error(token, "variable already exists");
+                    };
+                }
+            }
         }
     }
 
@@ -209,31 +280,36 @@ impl CompilerState {
         self.assembly_state.public_indices.insert(model_definition.name.value.to_string(), constant_index);
     }
 
-    fn compile_function_definition_base(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> (Function, Positions) {
-        let mut function = Function::new();
-        let mut positions: Positions = Positions::new();
+    fn compile_function_definition_base(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> FunctionState {
+        let mut function_state = FunctionState::new();
 
         for statement in function_definition.body.iter() {
-            self.compile_statement(context, &mut function, &mut positions, statement);
-        }
+            self.compile_statement(context, &mut function_state, statement);
+        };
 
-        (function, positions)
+        function_state.emit_return(function_state.get_last_position());
+
+        function_state
     }
 
     // return constant index
     fn compile_function_definition(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> usize {
-        let (function, positions) = self.compile_function_definition_base(context, function_definition);
+        let function_state = self.compile_function_definition_base(context, function_definition);
 
         // can not have instance function here
-        if function.is_instance {
+        if function_state.is_instance {
             self.errors.push_error(&function_definition.name, "instance function can inside implement block only");
             0
         } else {
-            let function_index = context.add_function(function, positions, &function_definition.name.value.to_string(), self.assembly_state.index);
+            let function_index = context.add_function(function_state, &function_definition.name.value.to_string(), self.assembly_state.index);
             let constant_index = context.add_constant(Object::Function(function_index));
 
             if let Some(local_index) = self.define_local_by_identifier(context, &function_definition.name) {
                 context.local_values.insert(local_index, constant_index);
+            };
+
+            if &function_definition.name.value.to_string() == "main" {
+                context.entry_point = function_index;
             };
 
             constant_index
@@ -264,8 +340,8 @@ impl CompilerState {
         let mut functions: HashMap<String, usize> = HashMap::new();
 
         for function_definition in implement_definition.functions.iter() {
-            let (function, positions) = self.compile_function_definition_base(context, function_definition);
-            let index = context.add_function(function, positions, &function_definition.name.value.to_string(), self.assembly_state.index);
+            let function_state = self.compile_function_definition_base(context, function_definition);
+            let index = context.add_function(function_state, &function_definition.name.value.to_string(), self.assembly_state.index);
 
             functions.insert(function_definition.name.value.to_string(), index);
         }
@@ -381,8 +457,6 @@ pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str) -
         errors.push_error(&Token::new(TokenValue::None, Position::none()), &format!("there may have cycle reference in this files [{}]", cycle_filenames));
         return Err(errors);
     };
-
-    println!("{:?}", context);
 
     Ok(())
 }

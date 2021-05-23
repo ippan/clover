@@ -1,7 +1,23 @@
-use crate::runtime::opcode::{Instruction, OpCode};
+use crate::runtime::opcode::Instruction;
 use crate::runtime::object::Object;
 use std::collections::HashMap;
 use crate::runtime::assembly_information::{DebugInfo, FileInfo};
+use crate::intermediate::Position;
+
+#[derive(Debug, Clone)]
+pub struct RuntimeError {
+    pub message: String,
+    pub position: Position
+}
+
+impl RuntimeError {
+    pub fn new(message: &str, position: Position) -> RuntimeError {
+        RuntimeError {
+            message: message.to_string(),
+            position
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Model {
@@ -24,8 +40,8 @@ impl Model {
 
 #[derive(Debug, Clone)]
 pub struct Function {
-    pub parameter_count: u16,
-    pub local_count: u16,
+    pub parameter_count: usize,
+    pub local_count: usize,
     pub is_instance: bool,
 
     pub instructions: Vec<Instruction>
@@ -41,15 +57,6 @@ impl Function {
             instructions: Vec::new()
         }
     }
-
-    fn emit(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
-    }
-
-    fn emit_opcode(&mut self, opcode: OpCode) {
-        self.emit(opcode.to_instruction(0));
-    }
-
 }
 
 #[derive(Debug)]

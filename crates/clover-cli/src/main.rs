@@ -1,5 +1,5 @@
 use clover::backend::compiler::compile_file;
-use std::collections::HashMap;
+use clover::runtime::run;
 
 fn main() {
     let result = compile_file("examples/test.luck");
@@ -7,6 +7,9 @@ fn main() {
     match result {
         Ok(program) => {
             println!("{:?}", program);
+            let result = run(program);
+
+            println!("{:?}", result);
         },
         Err(compile_error_list) => println!("{:?}", compile_error_list)
     }

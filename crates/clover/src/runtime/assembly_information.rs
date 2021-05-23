@@ -1,6 +1,6 @@
 use crate::intermediate::Positions;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DebugInfo {
     pub functions: Vec<Positions>
 }
@@ -13,7 +13,7 @@ impl DebugInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileInfo {
     // store filename
     pub filenames: Vec<String>,

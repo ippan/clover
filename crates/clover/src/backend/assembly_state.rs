@@ -1,6 +1,4 @@
-use crate::runtime::object::Object;
 use std::collections::HashMap;
-use crate::intermediate::Position;
 
 #[derive(Debug, Clone)]
 pub struct AssemblyState {
