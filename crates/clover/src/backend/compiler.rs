@@ -5,18 +5,20 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
+use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct CompilerContext {
     pub models: Vec<Model>,
     pub functions: Vec<Function>,
     pub constants: Vec<Object>,
+    pub global_dependencies: HashSet<usize>,
 
     pub local_count: usize,
     pub assemblies: HashMap<String, AssemblyState>,
@@ -34,6 +36,8 @@ impl CompilerContext {
             models: Vec::new(),
             functions: Vec::new(),
             constants: Vec::new(),
+            global_dependencies: HashSet::new(),
+
             local_count: 0,
             assemblies: HashMap::new(),
             local_values: HashMap::new(),
@@ -139,6 +143,7 @@ impl CompilerContext {
             models: self.models.clone(),
             functions: self.functions.clone(),
             constants: self.constants.clone(),
+            global_dependencies: self.global_dependencies.iter().cloned().collect(),
 
             local_count: self.local_count,
             local_values: self.local_values.clone(),
@@ -200,12 +205,75 @@ impl CompilerState {
         }
     }
 
-    fn compile_boolean_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, bool_expression: &BooleanExpression) {
+    fn compile_boolean_expression(&mut self, _context: &mut CompilerContext, function_state: &mut FunctionState, bool_expression: &BooleanExpression) {
         match bool_expression.token.value {
             TokenValue::True => function_state.emit(OpCode::PushBoolean.to_instruction(1), bool_expression.token.position),
             TokenValue::False => function_state.emit(OpCode::PushBoolean.to_instruction(0), bool_expression.token.position),
             _ => self.errors.push_error(&bool_expression.token, "Unexpect token")
         }
+    }
+
+    fn compile_identifier_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, identifier_expression: &IdentifierExpression) {
+        let identifier = identifier_expression.token.value.to_string();
+
+        if let Some(index) = function_state.find_local(&identifier) {
+            function_state.emit(OpCode::LocalGet.to_instruction(index as u64), identifier_expression.token.position);
+        } else if let Some(&index) = self.locals.get(&identifier) {
+            function_state.emit(OpCode::ContextGet.to_instruction(index as u64), identifier_expression.token.position);
+        } else {
+            let index = context.add_constant(Object::String(identifier));
+            context.global_dependencies.insert(index);
+            function_state.emit(OpCode::GlobalGet.to_instruction(index as u64), identifier_expression.token.position);
+        }
+    }
+
+    fn compile_assign_expression_left_part(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, infix_expression: &InfixExpression) {
+        let left_expression = infix_expression.left.deref();
+
+        match left_expression {
+            Expression::Identifier(identifier_expression) => {
+                let identifier = identifier_expression.token.value.to_string();
+
+                if let Some(index) = function_state.find_local(&identifier) {
+                    function_state.emit(OpCode::LocalSet.to_instruction(index as u64), infix_expression.infix.position);
+                } else if let Some(&index) = self.locals.get(&identifier) {
+                    function_state.emit(OpCode::ContextSet.to_instruction(index as u64), infix_expression.infix.position);
+                } else {
+                    let index = context.add_constant(Object::String(identifier));
+                    context.global_dependencies.insert(index);
+                    function_state.emit(OpCode::GlobalSet.to_instruction(index as u64), infix_expression.infix.position);
+                }
+            },
+            Expression::InstanceGet(instance_get_expression) => {},
+            _ => self.errors.push_error(&infix_expression.infix, "can not assign")
+        }
+    }
+
+    fn compile_assign_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, infix_expression: &InfixExpression) {
+        self.compile_expression(context, function_state, infix_expression.right.deref());
+        self.compile_assign_expression_left_part(context, function_state, infix_expression);
+    }
+
+    fn compile_infix_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, infix_expression: &InfixExpression) {
+        if infix_expression.infix.value == TokenValue::Assign {
+            return self.compile_assign_expression(context, function_state, infix_expression);
+        };
+
+        if let Some(opcode) = get_operation_opcode_by_token(&infix_expression.infix) {
+            self.compile_expression(context, function_state, infix_expression.left.deref());
+            self.compile_expression(context, function_state, infix_expression.right.deref());
+            function_state.emit_opcode(opcode, infix_expression.infix.position);
+        } else {
+            self.errors.push_error(&infix_expression.infix, "unknown operation");
+        }
+
+        match infix_expression.infix.value {
+            TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign => { self.compile_assign_expression_left_part(context, function_state, infix_expression); },
+            _ => {
+                // do nothing
+            }
+        };
+
     }
 
     fn compile_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, expression: &Expression) {
@@ -215,6 +283,8 @@ impl CompilerState {
             Expression::String(string_expression) => self.compile_string_expression(context, function_state, string_expression),
             Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
             Expression::Null(null_expression) => function_state.emit_opcode(OpCode::PushNull, null_expression.token.position),
+            Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
+            Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
             _ => {}
         }
     }
@@ -231,7 +301,7 @@ impl CompilerState {
                     if let Some(index) = function_state.define_local(&token.value.to_string()) {
                         if let Some(expression) = local_statement.values.get(i).unwrap() {
                             self.compile_expression(context, function_state, expression);
-                            function_state.emit(OpCode::LocalSet.to_instruction(index as u64), token.position);
+                            function_state.emit(OpCode::LocalInit.to_instruction(index as u64), token.position);
                         }
                     } else {
                         self.errors.push_error(token, "variable already exists");
@@ -258,7 +328,9 @@ impl CompilerState {
         let mut model = Model::new();
 
         for token in model_definition.properties.iter() {
-            model.add_property(&token.value.to_string());
+            if !model.add_property(&token.value.to_string()) {
+                self.errors.push_error(token, "property already exists");
+            }
         }
 
         let model_index = context.add_model(model);
@@ -483,4 +555,15 @@ pub fn compile(source: &str, filename: &str) -> Result<Program, CompileErrorList
     compile_to(&mut context, &source, filename)?;
 
     Ok(context.to_program())
+}
+
+// helpers
+fn get_operation_opcode_by_token(token: &Token) -> Option<OpCode> {
+    match token.value {
+        TokenValue::Plus | TokenValue::PlusAssign => Some(OpCode::Add),
+        TokenValue::Minus | TokenValue::MinusAssign => Some(OpCode::Sub),
+        TokenValue::Star | TokenValue::StarAssign => Some(OpCode::Multiply),
+        TokenValue::Slash | TokenValue::SlashAssign => Some(OpCode::Divide),
+        _ => None
+    }
 }

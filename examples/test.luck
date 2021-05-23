@@ -1,4 +1,11 @@
+local b, a
+
+model Test
+
+end
 
 function main()
-    false
+    local a = 1
+
+    a
 end

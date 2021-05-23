@@ -21,14 +21,19 @@ pub enum OpCode {
     LocalSet        = 0x06,
     // operand -> index of local
     LocalGet        = 0x07,
-    GlobalSet       = 0x08,
-    GlobalGet       = 0x09,
-
-    InstanceSet     = 0x0A,
-    InstanceGet     = 0x0B,
+    // operand -> index of local
+    LocalInit       = 0x08,
 
     ContextSet      = 0x0C,
     ContextGet      = 0x0D,
+
+    // operand -> index of constant (global name)
+    GlobalSet       = 0x11,
+    // operand -> index of constant (global name)
+    GlobalGet       = 0x12,
+
+    InstanceSet     = 0x13,
+    InstanceGet     = 0x14,
 
     PushThis        = 0x0E,
 
@@ -60,15 +65,19 @@ impl Instruction {
             0x03 => OpCode::PushNull,
             0x04 => OpCode::PushBoolean,
             0x05 => OpCode::Return,
+
             0x06 => OpCode::LocalSet,
             0x07 => OpCode::LocalGet,
-            0x08 => OpCode::GlobalSet,
-            0x09 => OpCode::GlobalGet,
-            0x0A => OpCode::InstanceSet,
-            0x0B => OpCode::InstanceGet,
+            0x08 => OpCode::LocalInit,
+
             0x0C => OpCode::ContextSet,
             0x0D => OpCode::ContextGet,
             0x0E => OpCode::PushThis,
+
+            0x11 => OpCode::GlobalSet,
+            0x12 => OpCode::GlobalGet,
+            0x13 => OpCode::InstanceSet,
+            0x14 => OpCode::InstanceGet,
 
             0x21 => OpCode::Add,
             0x22 => OpCode::Sub,

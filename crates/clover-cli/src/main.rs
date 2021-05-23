@@ -1,13 +1,12 @@
-use clover::backend::compiler::compile_file;
-use clover::runtime::run;
+use clover::runtime::create_state_by_filename;
 
 fn main() {
-    let result = compile_file("examples/test.luck");
+    let mut result = create_state_by_filename("examples/test.luck");
 
     match result {
-        Ok(program) => {
-            println!("{:?}", program);
-            let result = run(program);
+        Ok(mut state) => {
+            println!("{:?}", &state.program);
+            let result = state.execute();
 
             println!("{:?}", result);
         },

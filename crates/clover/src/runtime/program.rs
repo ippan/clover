@@ -21,20 +21,26 @@ impl RuntimeError {
 
 #[derive(Debug, Clone)]
 pub struct Model {
-    pub property_names: Vec<String>,
+    pub property_indices: HashMap<String, usize>,
     pub functions: HashMap<String, usize>
 }
 
 impl Model {
     pub fn new() -> Model {
         Model {
-            property_names: Vec::new(),
+            property_indices: HashMap::new(),
             functions: HashMap::new()
         }
     }
 
-    pub fn add_property(&mut self, property_name: &str) {
-        self.property_names.push(property_name.to_string());
+    pub fn add_property(&mut self, property_name: &str) -> bool {
+        if self.property_indices.contains_key(property_name) {
+            return false;
+        };
+
+        self.property_indices.insert(property_name.to_string(), self.property_indices.len());
+
+        true
     }
 }
 
@@ -64,6 +70,9 @@ pub struct Program {
     pub models: Vec<Model>,
     pub functions: Vec<Function>,
     pub constants: Vec<Object>,
+
+    // constant indices point to name of global
+    pub global_dependencies: Vec<usize>,
 
     pub local_count: usize,
 

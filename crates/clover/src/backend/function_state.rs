@@ -17,14 +17,18 @@ pub struct FunctionState {
 
 impl FunctionState {
     pub fn new() -> FunctionState {
-        FunctionState {
+        let mut function_state = FunctionState {
             is_instance: false,
             parameter_count: 0,
             local_count: 0,
             scopes: Vec::new(),
             instructions: Vec::new(),
             positions: Positions::new()
-        }
+        };
+
+        function_state.enter_scope();
+
+        function_state
     }
 
     pub fn get_last_position(&self) -> Position {

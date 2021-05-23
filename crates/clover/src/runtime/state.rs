@@ -84,8 +84,12 @@ impl State {
         function.instructions[program_counter]
     }
 
-    fn current_frame(&mut self) -> &mut Frame {
+    fn current_frame_as_mut(&mut self) -> &mut Frame {
         self.frames.back_mut().unwrap()
+    }
+
+    fn current_frame(&self) -> &Frame {
+        self.frames.back().unwrap()
     }
 
     pub fn pop(&mut self) -> Option<Object> {
@@ -96,11 +100,24 @@ impl State {
         self.frames.push_back(frame);
     }
 
+    pub fn last_position(&self) -> Position {
+        let program_counter = self.current_frame().program_counter;
+        if let Some(debug_info) = &self.program.debug_info {
+            if program_counter > 0 {
+                let function_index = self.current_frame().function_index;
+
+                return debug_info.functions[function_index][program_counter - 1];
+            };
+        };
+
+        Position::none()
+    }
+
     pub fn step(&mut self) -> Result<(), RuntimeError> {
         let instruction = self.current_instruction();
         let opcode = instruction.opcode();
 
-        self.current_frame().program_counter += 1;
+        self.current_frame_as_mut().program_counter += 1;
 
         match opcode {
             OpCode::Pop => { self.stack.pop_back(); },
@@ -111,6 +128,32 @@ impl State {
             OpCode::PushNull => self.stack.push_back(Object::Null),
             OpCode::PushBoolean => self.stack.push_back(Object::Boolean(instruction.operand() == 1)),
             OpCode::Return => { self.frames.pop_back(); },
+
+            OpCode::LocalGet => self.stack.push_back(self.current_frame().locals.get(instruction.operand() as usize).unwrap().clone()),
+            OpCode::LocalSet => { self.current_frame_as_mut().locals[instruction.operand() as usize] = self.stack.back().unwrap().clone(); },
+            OpCode::LocalInit => { self.current_frame_as_mut().locals[instruction.operand() as usize] = self.pop().unwrap(); },
+
+            OpCode::ContextGet => self.stack.push_back(self.locals.get(instruction.operand() as usize).unwrap().clone()),
+            OpCode::ContextSet => { self.locals[instruction.operand() as usize] = self.stack.back().unwrap().clone(); },
+
+            OpCode::GlobalGet => {
+                if let Some(Object::String(global_name)) = self.program.constants.get(instruction.operand() as usize) {
+                    if let Some(object) = self.globals.get(global_name) {
+                        self.stack.push_back(object.clone());
+                    } else {
+                        return Err(RuntimeError::new("global not found", self.last_position()));
+                    }
+                }
+            },
+            OpCode::GlobalSet => {
+                if let Some(Object::String(global_name)) = self.program.constants.get(instruction.operand() as usize) {
+                    if let Some(object) = self.globals.get_mut(global_name) {
+                        *object = self.stack.back().unwrap().clone();
+                    } else {
+                        return Err(RuntimeError::new("global not found", self.last_position()));
+                    }
+                }
+            },
             _ => {
                 // not implemented
             }
@@ -130,7 +173,7 @@ impl State {
             return Err(RuntimeError::new("too many parameters", Position::none()));
         };
 
-        self.call(function_index, parameters);
+        self.call(function_index, parameters)?;
 
         while !self.frames.is_empty() {
             self.step()?;
@@ -144,6 +187,14 @@ impl State {
     }
 
     pub fn execute(&mut self) -> Result<Object, RuntimeError> {
+        for &global_index in self.program.global_dependencies.iter() {
+            if let Some(Object::String(global_name)) = self.program.constants.get(global_index) {
+                if !self.globals.contains_key(global_name) {
+                    return Err(RuntimeError::new(&format!("this program need a global variable [{}] which is not found in this state", global_name), Position::none()));
+                }
+            }
+        }
+
         self.execute_by_function_index(self.program.entry_point, &[])
     }
 }
