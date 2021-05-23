@@ -105,6 +105,8 @@ impl Position {
     }
 }
 
+pub type Positions = Vec<Position>;
+
 #[derive(Clone, Debug)]
 pub struct Token {
     pub value: TokenValue,

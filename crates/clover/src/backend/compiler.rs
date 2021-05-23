@@ -4,13 +4,14 @@ use std::fs::read_to_string;
 use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::Scope;
 use crate::frontend::parser::parse;
-use crate::intermediate::{CompileError, CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition};
+use crate::intermediate::{CompileError, CompileErrorList, Position, Token, TokenValue, Positions};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::Instruction;
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use std::os::raw::c_long;
+use crate::runtime::assembly_information::{FileInfo, DebugInfo};
 
 const MAX_LOCALS: usize = 65536;
 
@@ -22,7 +23,10 @@ pub struct CompilerContext {
 
     pub local_count: usize,
     pub assemblies: HashMap<String, AssemblyState>,
-    pub local_values: HashMap<usize, usize>
+    pub local_values: HashMap<usize, usize>,
+
+    pub file_info: FileInfo,
+    pub debug_info: DebugInfo
 }
 
 impl CompilerContext {
@@ -33,7 +37,10 @@ impl CompilerContext {
             constants: Vec::new(),
             local_count: 0,
             assemblies: HashMap::new(),
-            local_values: HashMap::new()
+            local_values: HashMap::new(),
+
+            file_info: FileInfo::new(),
+            debug_info: DebugInfo::new()
         }
     }
 
@@ -57,9 +64,12 @@ impl CompilerContext {
         index
     }
 
-    pub fn add_function(&mut self, function: Function) -> usize {
+    pub fn add_function(&mut self, function: Function, positions: Positions, name: &str, assembly_index: usize) -> usize {
         let index = self.functions.len();
         self.functions.push(function);
+        self.debug_info.functions.push(positions);
+        self.file_info.function_names.push(name.to_string());
+        self.file_info.function_files.push(assembly_index);
         index
     }
 
@@ -92,8 +102,10 @@ impl CompilerContext {
         self.find_assembly(name).is_some()
     }
 
-    pub fn add_assembly(&mut self, assembly: AssemblyState) {
+    pub fn add_assembly(&mut self, assembly: AssemblyState) -> usize {
+        let index = self.assemblies.len();
         self.assemblies.insert(assembly.filename.clone(), assembly);
+        index
     }
 
     pub fn get_loaded_assemblies(&self) -> HashSet<String> {
@@ -115,7 +127,10 @@ impl CompilerContext {
             local_count: 0,
             local_values: HashMap::new(),
 
-            entry_point: 0
+            entry_point: 0,
+
+            file_info: None,
+            debug_info: None
         }
     }
 }
@@ -148,6 +163,13 @@ impl CompilerState {
         }
     }
 
+    fn compile_statement(&mut self, context: &mut CompilerContext, function: &mut Function, positions: &mut Positions, statement: &Statement) {
+        match statement {
+            Statement::Return(return_statement) => {},
+            _ => {}
+        }
+    }
+
     fn compile_include_definition(&mut self, context: &mut CompilerContext, include_definition: &IncludeDefinition) {
         for (i, alias) in include_definition.aliases.iter().enumerate() {
             if let Some(index) = self.define_local_by_identifier(context, alias) {
@@ -175,6 +197,9 @@ impl CompilerState {
             context.local_values.insert(local_index, constant_index);
         };
 
+        context.file_info.model_files.push(self.assembly_state.index);
+        context.file_info.model_names.push(model_definition.name.value.to_string());
+
         constant_index
     }
 
@@ -184,22 +209,27 @@ impl CompilerState {
         self.assembly_state.public_indices.insert(model_definition.name.value.to_string(), constant_index);
     }
 
-    fn compile_function_definition_base(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> Function {
+    fn compile_function_definition_base(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> (Function, Positions) {
         let mut function = Function::new();
+        let mut positions: Positions = Positions::new();
 
-        function
+        for statement in function_definition.body.iter() {
+            self.compile_statement(context, &mut function, &mut positions, statement);
+        }
+
+        (function, positions)
     }
 
     // return constant index
     fn compile_function_definition(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> usize {
-        let function = self.compile_function_definition_base(context, function_definition);
+        let (function, positions) = self.compile_function_definition_base(context, function_definition);
 
         // can not have instance function here
         if function.is_instance {
             self.errors.push_error(&function_definition.name, "instance function can inside implement block only");
             0
         } else {
-            let function_index = context.add_function(function);
+            let function_index = context.add_function(function, positions, &function_definition.name.value.to_string(), self.assembly_state.index);
             let constant_index = context.add_constant(Object::Function(function_index));
 
             if let Some(local_index) = self.define_local_by_identifier(context, &function_definition.name) {
@@ -234,8 +264,8 @@ impl CompilerState {
         let mut functions: HashMap<String, usize> = HashMap::new();
 
         for function_definition in implement_definition.functions.iter() {
-            let function = self.compile_function_definition_base(context, function_definition);
-            let index = context.add_function(function);
+            let (function, positions) = self.compile_function_definition_base(context, function_definition);
+            let index = context.add_function(function, positions, &function_definition.name.value.to_string(), self.assembly_state.index);
 
             functions.insert(function_definition.name.value.to_string(), index);
         }
@@ -301,9 +331,12 @@ pub fn compile_document(document: &Document, context: &mut CompilerContext) -> R
         errors: CompileErrorList::new(&document.filename)
     };
 
+    state.assembly_state.index = context.assemblies.len();
+
     state.compile(context, document);
 
     context.add_assembly(state.assembly_state);
+    context.file_info.filenames.push(document.filename.clone());
 
     if state.errors.is_empty() {
         Ok(())

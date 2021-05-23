@@ -1,6 +1,7 @@
-use crate::runtime::opcode::Instruction;
+use crate::runtime::opcode::{Instruction, OpCode};
 use crate::runtime::object::Object;
 use std::collections::HashMap;
+use crate::runtime::assembly_information::{DebugInfo, FileInfo};
 
 #[derive(Debug, Clone)]
 pub struct Model {
@@ -40,6 +41,15 @@ impl Function {
             instructions: Vec::new()
         }
     }
+
+    fn emit(&mut self, instruction: Instruction) {
+        self.instructions.push(instruction);
+    }
+
+    fn emit_opcode(&mut self, opcode: OpCode) {
+        self.emit(opcode.to_instruction(0));
+    }
+
 }
 
 #[derive(Debug)]
@@ -54,7 +64,8 @@ pub struct Program {
     pub local_values: HashMap<usize, usize>,
 
     // entry_point - 1 is the function index
-    pub entry_point: usize
+    pub entry_point: usize,
 
-    // TODO : add debug info
+    pub file_info: Option<FileInfo>,
+    pub debug_info: Option<DebugInfo>
 }
