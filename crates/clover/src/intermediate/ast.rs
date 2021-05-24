@@ -82,6 +82,7 @@ pub struct CallExpression {
 
 #[derive(Clone, Debug)]
 pub struct InstanceGetExpression {
+    pub token: Token,
     pub instance: Box<Expression>,
     pub index: Box<Expression>
 }

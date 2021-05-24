@@ -5,7 +5,7 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
@@ -227,6 +227,10 @@ impl CompilerState {
         }
     }
 
+    fn compile_this_expression(&mut self, _context: &mut CompilerContext, function_state: &mut FunctionState, this_expression: &ThisExpression) {
+        function_state.emit(OpCode::LocalGet.to_instruction(0 as u64), this_expression.token.position);
+    }
+
     fn compile_assign_expression_left_part(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, infix_expression: &InfixExpression) {
         let left_expression = infix_expression.left.deref();
 
@@ -245,7 +249,10 @@ impl CompilerState {
                 }
             },
             Expression::InstanceGet(instance_get_expression) => {
-                // TODO : implement instance set
+                self.compile_expression(context, function_state, instance_get_expression.instance.deref());
+                self.compile_expression(context, function_state, instance_get_expression.index.deref());
+
+                function_state.emit_opcode(OpCode::InstanceSet, instance_get_expression.token.position);
             },
             _ => self.errors.push_error(&infix_expression.infix, "can not assign")
         }
@@ -288,6 +295,13 @@ impl CompilerState {
         function_state.emit(OpCode::Call.to_instruction(call_expression.parameters.len() as u64), call_expression.token.position);
     }
 
+    fn compile_instance_get_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, instance_get_expression: &InstanceGetExpression) {
+        self.compile_expression(context, function_state, instance_get_expression.instance.deref());
+        self.compile_expression(context, function_state, instance_get_expression.index.deref());
+
+        function_state.emit_opcode(OpCode::InstanceGet, instance_get_expression.token.position);
+    }
+
     fn compile_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, expression: &Expression) {
         match expression {
             Expression::Integer(integer_expression) => self.compile_integer_expression(context, function_state, integer_expression),
@@ -298,6 +312,8 @@ impl CompilerState {
             Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
             Expression::Call(call_expression) => self.compile_call_expression(context, function_state, call_expression),
+            Expression::InstanceGet(instance_get_expression) => self.compile_instance_get_expression(context, function_state, instance_get_expression),
+            Expression::This(this_expression) => self.compile_this_expression(context, function_state, this_expression),
             _ => {}
         }
     }
@@ -369,6 +385,10 @@ impl CompilerState {
         let mut function_state = FunctionState::new();
 
         for parameter in function_definition.parameters.iter() {
+            if TokenValue::This == parameter.value {
+                function_state.is_instance = true;
+            };
+
             if function_state.define_local(&parameter.value.to_string()).is_none() {
                 self.errors.push_error(parameter, "parameter already exists");
             };

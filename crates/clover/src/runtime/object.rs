@@ -1,14 +1,19 @@
-use std::fmt;
-use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
+use std::rc::Rc;
+
 
 pub type Reference<T> = Rc<RefCell<T>>;
 
+pub fn make_reference<T>(object: T) -> Reference<T> {
+    Rc::new(RefCell::new(object))
+}
+
 #[derive(Debug, PartialEq)]
-pub struct Instance {
-    model_index: usize,
-    properties: HashMap<String, Object>
+pub struct ModelInstance {
+    pub model_index: usize,
+    pub properties: Vec<Object>
 }
 
 #[derive(Clone, PartialEq)]
@@ -28,7 +33,7 @@ pub enum Object {
     NativeModel(usize),
 
     // reference types
-    Instance(Reference<Instance>),
+    Instance(Reference<ModelInstance>),
     Array(Reference<Vec<Object>>),
 }
 
@@ -44,7 +49,14 @@ impl fmt::Debug for Object {
             Object::Null => struct_format.field("Null", &"Null".to_string()),
 
             Object::Model(value) => struct_format.field("Model", value),
+            Object::Instance(value) => struct_format.field("Instance", value),
             _ => struct_format.field("Unknown", &"Unknown".to_string())
         }.finish()
+    }
+}
+
+impl Object {
+    pub fn is_string(&self) -> bool {
+        matches!(self, Object::String(_))
     }
 }

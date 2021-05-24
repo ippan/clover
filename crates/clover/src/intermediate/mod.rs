@@ -81,6 +81,7 @@ impl TokenValue {
             TokenValue::Null => "Null".to_string(),
             TokenValue::True => "true".to_string(),
             TokenValue::False => "false".to_string(),
+            TokenValue::This => "this".to_string(),
 
             _ => format!("{:?}", self)
         }

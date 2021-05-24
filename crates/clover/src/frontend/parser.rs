@@ -290,18 +290,20 @@ impl<'a> ParserState<'a> {
         let token = self.current_token.clone();
         self.next_token();
 
-        let index = match token.value {
+        let index = match token.value.clone() {
             TokenValue::Dot => {
-                if let TokenValue::Identifier(identifier) = token.value {
-                    Expression::String(StringExpression { token: Token::new(TokenValue::String(identifier), token.position) })
+                let identifier_token = self.current_token.clone();
+                if let TokenValue::Identifier(identifier) = identifier_token.value.clone() {
+                    self.next_token();
+                    Expression::String(StringExpression { token: Token::new(TokenValue::String(identifier), identifier_token.position) })
                 } else {
-                    self.push_error(&token, "Unexpect Token".to_string());
+                    self.push_error(&identifier_token, "Unexpect Token".to_string());
                     return None;
                 }
             },
             TokenValue::LeftBracket => {
                 if let Some(index) = self.parse_expression(SymbolPriority::Lowest) {
-                    if !self.expect_and_pop_token(TokenValue::RightParentheses) {
+                    if !self.expect_and_pop_token(TokenValue::RightBracket) {
                         return None;
                     };
 
@@ -317,6 +319,7 @@ impl<'a> ParserState<'a> {
         };
 
         Some(Expression::InstanceGet(InstanceGetExpression {
+            token,
             instance: Box::new(expression),
             index: Box::new(index)
         }))

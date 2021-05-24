@@ -35,8 +35,6 @@ pub enum OpCode {
     InstanceSet     = 0x13,
     InstanceGet     = 0x14,
 
-    PushThis        = 0x0E,
-
     Add             = 0x21,
     Sub             = 0x22,
     Multiply        = 0x23,
@@ -72,7 +70,6 @@ impl Instruction {
 
             0x0C => OpCode::ContextSet,
             0x0D => OpCode::ContextGet,
-            0x0E => OpCode::PushThis,
 
             0x11 => OpCode::GlobalSet,
             0x12 => OpCode::GlobalGet,

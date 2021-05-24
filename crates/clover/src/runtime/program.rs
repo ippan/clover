@@ -1,8 +1,9 @@
-use crate::runtime::opcode::Instruction;
-use crate::runtime::object::Object;
 use std::collections::HashMap;
-use crate::runtime::assembly_information::{DebugInfo, FileInfo};
+
 use crate::intermediate::Position;
+use crate::runtime::assembly_information::{DebugInfo, FileInfo};
+use crate::runtime::object::Object;
+use crate::runtime::opcode::Instruction;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeError {

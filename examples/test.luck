@@ -1,17 +1,38 @@
 local b, a
 
 model Test
-
+    a
+    b
+    c
 end
 
-function hello(a, b, c)
-    b
+implement Test
+    function new()
+        Test(30, 20, 10)
+    end
+
+    function not_new(a, b, c)
+        Test(a, b, c)
+    end
+
+    function show_a(this)
+        this.a
+    end
+
+    function show_b(this)
+        this.b
+    end
+
 end
 
 function main()
-    local a = 1
 
-    local gg = hello(1, 2, 3)
+    local a = Test.new()
 
-    gg
+    local b = a.not_new(1, 2, 3)
+
+    b.a = a.b
+
+    b
+
 end
