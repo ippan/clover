@@ -3,6 +3,7 @@ use std::collections::{HashMap, LinkedList};
 use crate::runtime::object::Object;
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
+use std::ops::Deref;
 
 pub struct Frame {
     pub locals: Vec<Object>,
@@ -24,6 +25,8 @@ impl Frame {
         }
     }
 }
+
+pub type NativeFunction = fn(&mut State, &[Object]) -> Result<Object, RuntimeError>;
 
 pub struct State {
     pub globals: HashMap<String, Object>,
@@ -54,10 +57,10 @@ impl State {
         }
     }
 
-    fn call(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
+    fn call_function_by_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         let function = self.program.functions.get(function_index).unwrap();
 
-        // function index and parameters len is checked outside, no need to check here
+        // function index is checked outside, no need to check here
         if parameters.len() > function.parameter_count {
             return Err(RuntimeError::new("too many parameters", Position::none()));
         }
@@ -71,6 +74,30 @@ impl State {
         self.push_frame(frame);
 
         Ok(())
+    }
+
+    fn call_object(&mut self, object: Object, parameters: &[ Object ]) -> Result<(), RuntimeError> {
+        match object {
+            Object::Function(function_index) => self.call_function_by_index(function_index, parameters),
+            Object::InstanceFunction(model, function_index) => self.call_function_by_index(function_index,&make_instance_call_parameters(model.deref().clone(), parameters)),
+            Object::NativeFunction(function_index) => Ok(()),
+            Object::InstanceNativeFunction(model, function_index) => Ok(()),
+            Object::Model(model_index) => Ok(()),
+            Object::NativeModel(model_index) => Ok(()),
+            _ => Err(RuntimeError::new(&format!("can not call {:?}", object), self.last_position()))
+        }
+    }
+
+    fn execute_call_opcode(&mut self, parameter_count: usize) -> Result<(), RuntimeError> {
+        let mut parameters = vec![Object::Null; parameter_count];
+
+        for i in (0..parameter_count).rev() {
+            parameters[i] = self.stack.pop_back().unwrap();
+        };
+
+        let function_object = self.stack.pop_back().unwrap();
+
+        self.call_object(function_object, &parameters)
     }
 
     fn current_instruction(&self) -> Instruction {
@@ -154,6 +181,7 @@ impl State {
                     }
                 }
             },
+            OpCode::Call => self.execute_call_opcode(instruction.operand() as usize)?,
             _ => {
                 // not implemented
             }
@@ -173,7 +201,7 @@ impl State {
             return Err(RuntimeError::new("too many parameters", Position::none()));
         };
 
-        self.call(function_index, parameters)?;
+        self.call_function_by_index(function_index, parameters)?;
 
         while !self.frames.is_empty() {
             self.step()?;
@@ -197,4 +225,11 @@ impl State {
 
         self.execute_by_function_index(self.program.entry_point, &[])
     }
+}
+
+// helpers
+fn make_instance_call_parameters(object: Object, parameters: &[ Object ]) -> Vec<Object> {
+    let mut new_parameters = vec![ object ];
+    new_parameters.extend_from_slice(parameters);
+    new_parameters
 }

@@ -1,7 +1,7 @@
 use clover::runtime::create_state_by_filename;
 
 fn main() {
-    let mut result = create_state_by_filename("examples/test.luck");
+    let result = create_state_by_filename("examples/test.luck");
 
     match result {
         Ok(mut state) => {

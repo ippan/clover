@@ -5,9 +5,9 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression};
 use crate::runtime::object::Object;
-use crate::runtime::opcode::{OpCode};
+use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
@@ -244,7 +244,9 @@ impl CompilerState {
                     function_state.emit(OpCode::GlobalSet.to_instruction(index as u64), infix_expression.infix.position);
                 }
             },
-            Expression::InstanceGet(instance_get_expression) => {},
+            Expression::InstanceGet(instance_get_expression) => {
+                // TODO : implement instance set
+            },
             _ => self.errors.push_error(&infix_expression.infix, "can not assign")
         }
     }
@@ -273,7 +275,17 @@ impl CompilerState {
                 // do nothing
             }
         };
+    }
 
+    fn compile_call_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, call_expression: &CallExpression) {
+        // compile the function, after this the function object will on the top of stack
+        self.compile_expression(context, function_state, call_expression.function.deref());
+        // compile parameters
+        for parameter_expression in call_expression.parameters.iter() {
+            self.compile_expression(context, function_state, parameter_expression);
+        };
+
+        function_state.emit(OpCode::Call.to_instruction(call_expression.parameters.len() as u64), call_expression.token.position);
     }
 
     fn compile_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, expression: &Expression) {
@@ -285,6 +297,7 @@ impl CompilerState {
             Expression::Null(null_expression) => function_state.emit_opcode(OpCode::PushNull, null_expression.token.position),
             Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
+            Expression::Call(call_expression) => self.compile_call_expression(context, function_state, call_expression),
             _ => {}
         }
     }
@@ -354,6 +367,14 @@ impl CompilerState {
 
     fn compile_function_definition_base(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> FunctionState {
         let mut function_state = FunctionState::new();
+
+        for parameter in function_definition.parameters.iter() {
+            if function_state.define_local(&parameter.value.to_string()).is_none() {
+                self.errors.push_error(parameter, "parameter already exists");
+            };
+        };
+
+        function_state.parameter_count = function_definition.parameters.len();
 
         for statement in function_definition.body.iter() {
             self.compile_statement(context, &mut function_state, statement);

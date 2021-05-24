@@ -4,8 +4,14 @@ model Test
 
 end
 
+function hello(a, b, c)
+    b
+end
+
 function main()
     local a = 1
 
-    a
+    local gg = hello(1, 2, 3)
+
+    gg
 end

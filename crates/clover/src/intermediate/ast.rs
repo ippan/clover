@@ -75,6 +75,7 @@ pub struct IfExpression {
 
 #[derive(Clone, Debug)]
 pub struct CallExpression {
+    pub token: Token,
     pub function: Box<Expression>,
     pub parameters: Vec<Expression>
 }

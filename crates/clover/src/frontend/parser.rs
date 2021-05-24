@@ -244,13 +244,18 @@ impl<'a> ParserState<'a> {
     }
 
     fn parse_call_expression(&mut self, expression: Expression) -> Option<Expression> {
-        self.expect_and_pop_token(TokenValue::LeftParentheses);
+        self.expect_token(TokenValue::LeftParentheses);
+
+        let token = self.current_token.clone();
+        self.next_token();
 
         let mut parameters = Vec::new();
 
         let mut last_comma = None;
 
         while !self.current_token_is_any_of(&[ TokenValue::RightParentheses, TokenValue::Eof ]) {
+            last_comma = None;
+
             if let Some(parameter) = self.parse_expression(SymbolPriority::Lowest) {
                 parameters.push(parameter);
 
@@ -275,6 +280,7 @@ impl<'a> ParserState<'a> {
         self.expect_and_pop_token(TokenValue::RightParentheses);
 
         Some(Expression::Call(CallExpression {
+            token,
             function: Box::new(expression),
             parameters: parameters
         }))

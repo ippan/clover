@@ -2,8 +2,6 @@ use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use crate::runtime::state::State;
-use crate::runtime::program::RuntimeError;
 
 pub type Reference<T> = Rc<RefCell<T>>;
 
@@ -12,8 +10,6 @@ pub struct Instance {
     model_index: usize,
     properties: HashMap<String, Object>
 }
-
-pub type NativeFunction = fn(&mut State, &[Object]) -> Result<Object, RuntimeError>;
 
 #[derive(Clone, PartialEq)]
 pub enum Object {
