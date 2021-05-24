@@ -9,4 +9,12 @@ name = "clover-cli"
 version = "0.0.1"
 dependencies = [
  "clover",
+ "clover-std",
+]
+
+[[package]]
+name = "clover-std"
+version = "0.0.1"
+dependencies = [
+ "clover",
 ]

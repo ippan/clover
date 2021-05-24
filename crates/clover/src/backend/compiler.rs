@@ -7,7 +7,7 @@ use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
 use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression};
 use crate::runtime::object::Object;
-use crate::runtime::opcode::{OpCode, Instruction};
+use crate::runtime::opcode::OpCode;
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
@@ -50,12 +50,7 @@ impl CompilerContext {
     }
 
     pub fn add_constant(&mut self, object: Object) -> usize {
-        for (i, constant) in self.constants.iter().enumerate() {
-            if *constant == object {
-                return i;
-            };
-        };
-
+        // TODO : check duplicate object
         let index = self.constants.len();
         self.constants.push(object);
         index

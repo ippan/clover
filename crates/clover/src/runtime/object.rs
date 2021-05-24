@@ -1,7 +1,8 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
+use crate::runtime::state::State;
+use crate::runtime::program::RuntimeError;
 
 
 pub type Reference<T> = Rc<RefCell<T>>;
@@ -10,13 +11,25 @@ pub fn make_reference<T>(object: T) -> Reference<T> {
     Rc::new(RefCell::new(object))
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct ModelInstance {
     pub model_index: usize,
     pub properties: Vec<Object>
 }
 
-#[derive(Clone, PartialEq)]
+pub trait NativeModel {
+    // register all native function in this function
+    fn register(&mut self, state: &mut State);
+    // direct call to model
+    fn model_get(&self, index: Object) -> Result<Object, RuntimeError>;
+}
+
+pub trait NativeModelInstance {
+    fn instance_get(&self, index: Object) -> Result<Object, RuntimeError>;
+    fn instance_set(&mut self, index: Object, value: Object) -> Result<(), RuntimeError>;
+}
+
+#[derive(Clone)]
 pub enum Object {
     Integer(i64),
     Float(f64),
@@ -34,6 +47,8 @@ pub enum Object {
 
     // reference types
     Instance(Reference<ModelInstance>),
+    NativeInstance(Reference<dyn NativeModelInstance>),
+
     Array(Reference<Vec<Object>>),
 }
 
@@ -58,5 +73,17 @@ impl fmt::Debug for Object {
 impl Object {
     pub fn is_string(&self) -> bool {
         matches!(self, Object::String(_))
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Object::Integer(value) => value.to_string(),
+            Object::Float(value) => value.to_string(),
+            Object::String(value) => value.clone(),
+            Object::Boolean(value) => value.to_string(),
+            Object::Null => "Null".to_string(),
+
+            _ => "Unknown".to_string()
+        }
     }
 }

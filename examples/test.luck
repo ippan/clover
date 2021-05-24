@@ -35,4 +35,6 @@ function main()
 
     b
 
+    print("hello")
+
 end

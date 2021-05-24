@@ -1,17 +1,13 @@
 [package]
-name = "clover-cli"
+name = "clover-std"
 version = "0.0.1"
 authors = [ "PanPan <ippan829@gmail.com>" ]
 license = "MIT"
 edition = "2018"
 repository = "https://github.com/ippan/clover"
 keywords = [ "language", "scripting" ]
-description = "A command line interface for Clover."
-
-[[bin]]
-name = "clover"
-path = "src/main.rs"
+readme = "README.md"
+description = "A scripting language."
 
 [dependencies]
 clover = { path = "../clover" }
-clover-std = { path = "../clover-std" }
