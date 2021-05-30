@@ -302,6 +302,7 @@ fn get_symbol(symbol: &str) -> Option<TokenValue> {
         "-"     =>  TokenValue::Minus,
         "*"     =>  TokenValue::Star,
         "/"     =>  TokenValue::Slash,
+        "%"     =>  TokenValue::Percent,
         "!"     =>  TokenValue::Not,
         "("     =>  TokenValue::LeftParentheses,
         ")"     =>  TokenValue::RightParentheses,
@@ -324,7 +325,8 @@ fn get_symbol(symbol: &str) -> Option<TokenValue> {
         "+="    =>  TokenValue::PlusAssign,
         "-="    =>  TokenValue::MinusAssign,
         "*="    =>  TokenValue::StarAssign,
-        "/="    =>  TokenValue::SlashAssign
+        "/="    =>  TokenValue::SlashAssign,
+        "%="    =>  TokenValue::PercentAssign
     }
 }
 

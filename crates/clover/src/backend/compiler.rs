@@ -7,7 +7,7 @@ use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
 use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression};
 use crate::runtime::object::Object;
-use crate::runtime::opcode::OpCode;
+use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
@@ -263,16 +263,16 @@ impl CompilerState {
             return self.compile_assign_expression(context, function_state, infix_expression);
         };
 
-        if let Some(opcode) = get_operation_opcode_by_token(&infix_expression.infix) {
+        if let Some(instruction) = get_operation_instruction_by_token(&infix_expression.infix) {
             self.compile_expression(context, function_state, infix_expression.left.deref());
             self.compile_expression(context, function_state, infix_expression.right.deref());
-            function_state.emit_opcode(opcode, infix_expression.infix.position);
+            function_state.emit(instruction, infix_expression.infix.position);
         } else {
             self.errors.push_error(&infix_expression.infix, "unknown operation");
         }
 
         match infix_expression.infix.value {
-            TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign => { self.compile_assign_expression_left_part(context, function_state, infix_expression); },
+            TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign | TokenValue::PercentAssign => { self.compile_assign_expression_left_part(context, function_state, infix_expression); },
             _ => {
                 // do nothing
             }
@@ -594,12 +594,22 @@ pub fn compile(source: &str, filename: &str) -> Result<Program, CompileErrorList
 }
 
 // helpers
-fn get_operation_opcode_by_token(token: &Token) -> Option<OpCode> {
-    match token.value {
-        TokenValue::Plus | TokenValue::PlusAssign => Some(OpCode::Add),
-        TokenValue::Minus | TokenValue::MinusAssign => Some(OpCode::Sub),
-        TokenValue::Star | TokenValue::StarAssign => Some(OpCode::Multiply),
-        TokenValue::Slash | TokenValue::SlashAssign => Some(OpCode::Divide),
-        _ => None
-    }
+fn get_operation_instruction_by_token(token: &Token) -> Option<Instruction> {
+    let operand: u64 = match token.value {
+        TokenValue::Plus | TokenValue::PlusAssign => 0,
+        TokenValue::Minus | TokenValue::MinusAssign => 1,
+        TokenValue::Star | TokenValue::StarAssign => 2,
+        TokenValue::Slash | TokenValue::SlashAssign => 3,
+        TokenValue::Percent | TokenValue::PercentAssign => 4,
+        TokenValue::Equal => 5,
+        TokenValue::Greater => 6,
+        TokenValue::Less => 7,
+
+        TokenValue::NotEqual => 256 | 5,
+        TokenValue::GreaterEqual => 256 | 6,
+        TokenValue::LessEqual => 256 | 7,
+        _ => return None
+    };
+
+    Some(OpCode::Operation.to_instruction(operand))
 }

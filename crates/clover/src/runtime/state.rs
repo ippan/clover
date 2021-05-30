@@ -15,6 +15,8 @@ macro_rules! ensure_type {
     }
 }
 
+const META_METHODS: &[ &str ] = &[ "_add", "_sub", "_mul", "_div", "_mod", "_eq", "_gt", "_lt" ];
+
 pub struct Frame {
     pub locals: Vec<Object>,
     pub program_counter: usize,

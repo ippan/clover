@@ -35,10 +35,8 @@ pub enum OpCode {
     InstanceSet     = 0x13,
     InstanceGet     = 0x14,
 
-    Add             = 0x21,
-    Sub             = 0x22,
-    Multiply        = 0x23,
-    Divide          = 0x24,
+    // operand is operator
+    Operation       = 0x21,
 
     Closure         = 0x31,
 
@@ -76,10 +74,7 @@ impl Instruction {
             0x13 => OpCode::InstanceSet,
             0x14 => OpCode::InstanceGet,
 
-            0x21 => OpCode::Add,
-            0x22 => OpCode::Sub,
-            0x23 => OpCode::Multiply,
-            0x24 => OpCode::Divide,
+            0x21 => OpCode::Operation,
 
             0x31 => OpCode::Closure,
             0x32 => OpCode::Call,

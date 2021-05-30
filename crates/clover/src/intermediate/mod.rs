@@ -19,12 +19,14 @@ pub enum TokenValue {
     Minus,
     Star,
     Slash,
+    Percent,
 
     Assign,
     PlusAssign,
     MinusAssign,
     StarAssign,
     SlashAssign,
+    PercentAssign,
 
     BitAnd,
     BitOr,
