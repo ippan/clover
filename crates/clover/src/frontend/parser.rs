@@ -21,6 +21,7 @@ enum SymbolPriority {
 
 struct ParserState<'a> {
     tokens: Iter<'a, Token>,
+    last_token: Token,
     current_token: Token,
     peek_token: Token,
     errors: CompileErrorList
@@ -28,6 +29,7 @@ struct ParserState<'a> {
 
 impl<'a> ParserState<'a> {
     fn next_token(&mut self) {
+        self.last_token = self.current_token.clone();
         self.current_token = self.peek_token.clone();
 
         if let Some(token) = self.tokens.next() {
@@ -48,12 +50,12 @@ impl<'a> ParserState<'a> {
 
     fn get_current_precedence(&self) -> SymbolPriority {
         match self.current_token.value {
-            TokenValue::Assign | TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign => SymbolPriority::Assign,
+            TokenValue::Assign | TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign | TokenValue::PercentAssign => SymbolPriority::Assign,
             TokenValue::And | TokenValue::Or => SymbolPriority::Boolean,
             TokenValue::Equal | TokenValue::NotEqual => SymbolPriority::Equals,
             TokenValue::Less | TokenValue::Greater | TokenValue::LessEqual | TokenValue::GreaterEqual => SymbolPriority::LessGreater,
             TokenValue::Plus | TokenValue::Minus => SymbolPriority::Sum,
-            TokenValue::Star | TokenValue::Slash | TokenValue::BitAnd | TokenValue::BitOr => SymbolPriority::Product,
+            TokenValue::Star | TokenValue::Slash | TokenValue::Percent | TokenValue::BitAnd | TokenValue::BitOr => SymbolPriority::Product,
             TokenValue::Dot | TokenValue::LeftBracket => SymbolPriority::InstanceGet,
             TokenValue::LeftParentheses => SymbolPriority::Call,
             _ => SymbolPriority::Lowest
@@ -181,7 +183,7 @@ impl<'a> ParserState<'a> {
     }
 
     fn parse_group_expression(&mut self) -> Option<Expression> {
-        if !self.expect_token(TokenValue::LeftParentheses) {
+        if !self.expect_and_pop_token(TokenValue::LeftParentheses) {
             return None;
         };
 
@@ -326,10 +328,20 @@ impl<'a> ParserState<'a> {
     }
 
     fn parse_infix_expression(&mut self, expression: Expression) -> Option<Expression> {
+        // if '-' or '(' is the first token at line, it's not a infix expression
         match self.current_token.value {
-            TokenValue::Assign | TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign |
+            TokenValue::LeftParentheses | TokenValue::Minus => {
+                if self.current_token.position.line > self.last_token.position.line {
+                    return None;
+                };
+            },
+            _ => {}
+        }
+
+        match self.current_token.value {
+            TokenValue::Assign | TokenValue::PlusAssign | TokenValue::MinusAssign | TokenValue::StarAssign | TokenValue::SlashAssign | TokenValue::PercentAssign |
             TokenValue::And | TokenValue::Or | TokenValue::Equal | TokenValue::NotEqual | TokenValue::Less | TokenValue::Greater | TokenValue::LessEqual | TokenValue::GreaterEqual |
-            TokenValue::BitAnd | TokenValue::BitOr | TokenValue::Plus | TokenValue::Minus | TokenValue::Star | TokenValue::Slash
+            TokenValue::BitAnd | TokenValue::BitOr | TokenValue::Plus | TokenValue::Minus | TokenValue::Star | TokenValue::Slash | TokenValue::Percent
             => {
                 let token = self.current_token.clone();
                 let precedence = self.get_current_precedence();
@@ -754,6 +766,7 @@ pub fn parse(source: &str, filename: &str) -> Result<Document, CompileErrorList>
 
     let mut state = ParserState {
         tokens: token_list.iter(),
+        last_token: Token::none(),
         current_token: Token::none(),
         peek_token: Token::none(),
         errors: CompileErrorList::new(filename)

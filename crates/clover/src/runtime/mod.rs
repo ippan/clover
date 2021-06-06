@@ -9,6 +9,7 @@ pub mod program;
 pub mod opcode;
 pub mod assembly_information;
 pub mod state;
+mod operation;
 
 
 pub fn run(program: Program) -> Result<Object, RuntimeError> {

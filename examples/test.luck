@@ -37,4 +37,5 @@ function main()
 
     print("hello")
 
+    (5 + 3 * 7) / 8 % 2 > 5
 end

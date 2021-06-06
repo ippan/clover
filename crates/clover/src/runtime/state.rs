@@ -4,6 +4,7 @@ use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, N
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::{Deref, DerefMut};
+use crate::runtime::operation::binary_operation;
 
 macro_rules! ensure_type {
     ($object: expr, $object_pattern: pat, $message: expr, $position: expr) => {
@@ -14,8 +15,6 @@ macro_rules! ensure_type {
         }
     }
 }
-
-const META_METHODS: &[ &str ] = &[ "_add", "_sub", "_mul", "_div", "_mod", "_eq", "_gt", "_lt" ];
 
 pub struct Frame {
     pub locals: Vec<Object>,
@@ -260,9 +259,9 @@ impl State {
     fn instance_set_model_instance_by_index(&mut self, model_instance: Reference<ModelInstance>, index: usize) -> Result<(), RuntimeError> {
         if let Some(object) = model_instance.borrow_mut().properties.get_mut(index as usize) {
             *object = self.top();
-            return Ok(());
+            Ok(())
         } else {
-            return Err(RuntimeError::new("index does not exists", self.last_position()));
+            Err(RuntimeError::new("index does not exists", self.last_position()))
         }
     }
 
@@ -292,6 +291,17 @@ impl State {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
             }
         };
+
+        Ok(())
+    }
+
+    fn binary_operation(&mut self, operand: usize) -> Result<(), RuntimeError> {
+        let right = self.pop().unwrap();
+        let left = self.pop().unwrap();
+
+        let result = binary_operation(self, &left, &right, operand)?;
+
+        self.push(result);
 
         Ok(())
     }
@@ -347,6 +357,7 @@ impl State {
             OpCode::InstanceGet => self.instance_get()?,
             OpCode::InstanceSet => self.instance_set()?,
             OpCode::Call => self.execute_call_opcode(instruction.operand() as usize)?,
+            OpCode::Operation => self.binary_operation(instruction.operand() as usize)?,
             _ => {
                 // not implemented
             }
