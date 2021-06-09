@@ -37,5 +37,8 @@ function main()
 
     print("hello")
 
-    (5 + 3 * 7) / 8 % 2 > 5
+    local c = 1.2
+    c %= 1.0
+
+    c
 end

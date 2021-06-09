@@ -86,4 +86,12 @@ impl Object {
             _ => "Unknown".to_string()
         }
     }
+
+    pub fn to_bool(&self) -> bool {
+        match self {
+            Object::Boolean(value) => *value,
+            Object::Null => false,
+            _ => true
+        }
+    }
 }
