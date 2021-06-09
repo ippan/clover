@@ -75,23 +75,25 @@ impl Object {
         matches!(self, Object::String(_))
     }
 
-    pub fn to_string(&self) -> String {
-        match self {
-            Object::Integer(value) => value.to_string(),
-            Object::Float(value) => value.to_string(),
-            Object::String(value) => value.clone(),
-            Object::Boolean(value) => value.to_string(),
-            Object::Null => "Null".to_string(),
-
-            _ => "Unknown".to_string()
-        }
-    }
-
     pub fn to_bool(&self) -> bool {
         match self {
             Object::Boolean(value) => *value,
             Object::Null => false,
             _ => true
+        }
+    }
+}
+
+impl ToString for Object {
+    fn to_string(&self) -> String {
+        match self {
+            Object::Integer(value) => value.to_string(),
+            Object::Float(value) => value.to_string(),
+            Object::String(value) => value.clone(),
+            Object::Boolean(value) => value.to_string(),
+            Object::Null => "null".to_string(),
+
+            _ => "Unknown".to_string()
         }
     }
 }

@@ -10,6 +10,7 @@ fn integer_add(state: &State, left: i64, right: &Object) -> Result<Object, Runti
     match right {
         Object::Integer(value) => Ok(Object::Integer(left + value)),
         Object::Float(_) => float_add(state, left as f64, right),
+        Object::String(value) => Ok(Object::String(left.to_string() + value)),
 
         _ => Err(RuntimeError::new("can not add integer with object", state.last_position()))
     }
@@ -101,6 +102,7 @@ fn float_add(state: &State, left: f64, right: &Object) -> Result<Object, Runtime
     match right {
         Object::Float(value) => Ok(Object::Float(left + value)),
         Object::Integer(value) => Ok(Object::Float(left + *value as f64)),
+        Object::String(value) => Ok(Object::String(left.to_string() + value)),
 
         _ => Err(RuntimeError::new("can not add float with object", state.last_position()))
     }
@@ -188,11 +190,34 @@ fn float_operation(state: &State, left: f64, right: &Object, operand: usize) -> 
     }
 }
 
+fn string_operation(state: &State, left: &str, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
+    match operand {
+        0 => {
+            match right {
+                Object::String(_) | Object::Integer(_) | Object::Float(_) | Object::Boolean(_) | Object::Null => Ok(Object::String(left.to_string() + &right.to_string())),
+                _ => Err(RuntimeError::new("can not add string with object", state.last_position()))
+            }
+        },
+
+        _ => Err(RuntimeError::new("unknown operation", state.last_position()))
+    }
+}
+
 pub fn binary_operation(state: &State, left: &Object, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
     match left {
         Object::Integer(value) => integer_operation(state, *value, right, operand),
         Object::Float(value) => float_operation(state, *value, right, operand),
+        Object::String(value) => string_operation(state, value, right, operand),
 
         _ => Err(RuntimeError::new("unknown object", state.last_position()))
+    }
+}
+
+pub fn negative_operation(state: &State, target: &Object) -> Result<Object, RuntimeError> {
+    match target {
+        Object::Integer(value) => Ok(Object::Integer(-*value)),
+        Object::Float(value) => Ok(Object::Float(-*value)),
+
+        _ => Err(RuntimeError::new("object can not do minus operation", state.last_position()))
     }
 }

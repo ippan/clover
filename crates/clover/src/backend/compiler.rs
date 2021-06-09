@@ -5,7 +5,7 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
@@ -279,6 +279,16 @@ impl CompilerState {
         };
     }
 
+    fn compile_prefix_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, prefix_expression: &PrefixExpression) {
+        self.compile_expression(context, function_state, prefix_expression.right.deref());
+
+        match prefix_expression.prefix.value {
+            TokenValue::Minus => function_state.emit_opcode(OpCode::Negative, prefix_expression.prefix.position),
+            TokenValue::Not => function_state.emit_opcode(OpCode::Not, prefix_expression.prefix.position),
+            _ => self.errors.push_error(&prefix_expression.prefix, "unknown operation")
+        }
+    }
+
     fn compile_call_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, call_expression: &CallExpression) {
         // compile the function, after this the function object will on the top of stack
         self.compile_expression(context, function_state, call_expression.function.deref());
@@ -305,6 +315,7 @@ impl CompilerState {
             Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
             Expression::Null(null_expression) => function_state.emit_opcode(OpCode::PushNull, null_expression.token.position),
             Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
+            Expression::Prefix(prefix_expression) => self.compile_prefix_expression(context, function_state, prefix_expression),
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
             Expression::Call(call_expression) => self.compile_call_expression(context, function_state, call_expression),
             Expression::InstanceGet(instance_get_expression) => self.compile_instance_get_expression(context, function_state, instance_get_expression),

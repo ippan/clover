@@ -40,5 +40,7 @@ function main()
     local c = 1.2
     c %= 1.0
 
-    c
+    -c
+
+    1 + "test" + 2
 end

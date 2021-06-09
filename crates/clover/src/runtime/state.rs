@@ -4,7 +4,7 @@ use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, N
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::{Deref, DerefMut};
-use crate::runtime::operation::binary_operation;
+use crate::runtime::operation::{binary_operation, negative_operation};
 
 macro_rules! ensure_type {
     ($object: expr, $object_pattern: pat, $message: expr, $position: expr) => {
@@ -358,6 +358,14 @@ impl State {
             OpCode::InstanceSet => self.instance_set()?,
             OpCode::Call => self.execute_call_opcode(instruction.operand() as usize)?,
             OpCode::Operation => self.binary_operation(instruction.operand() as usize)?,
+            OpCode::Not => {
+                let value = Object::Boolean(self.pop().unwrap().to_bool());
+                self.push(value);
+            },
+            OpCode::Negative => {
+                let target = self.pop().unwrap();
+                self.push(negative_operation(self, &target)?)
+            },
             _ => {
                 // not implemented
             }

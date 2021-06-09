@@ -37,6 +37,8 @@ pub enum OpCode {
 
     // operand is operator
     Operation       = 0x21,
+    Not             = 0x22,
+    Negative        = 0x23,
 
     Closure         = 0x31,
 
@@ -75,6 +77,8 @@ impl Instruction {
             0x14 => OpCode::InstanceGet,
 
             0x21 => OpCode::Operation,
+            0x22 => OpCode::Not,
+            0x23 => OpCode::Negative,
 
             0x31 => OpCode::Closure,
             0x32 => OpCode::Call,
