@@ -45,6 +45,9 @@ pub enum OpCode {
     // operand -> parameter count
     Call            = 0x32,
 
+    // operand -> value count
+    Array           = 0x36,
+
     PushNewMap      = 0x41,
 
     // operand -> position
@@ -87,6 +90,8 @@ impl Instruction {
 
             0x31 => OpCode::Closure,
             0x32 => OpCode::Call,
+
+            0x36 => OpCode::Array,
 
             0x41 => OpCode::PushNewMap,
 

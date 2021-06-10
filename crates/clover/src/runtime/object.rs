@@ -3,6 +3,7 @@ use std::fmt;
 use std::rc::Rc;
 use crate::runtime::state::State;
 use crate::runtime::program::RuntimeError;
+use std::ops::Deref;
 
 
 pub type Reference<T> = Rc<RefCell<T>>;
@@ -66,6 +67,7 @@ impl fmt::Debug for Object {
 
             Object::Model(value) => struct_format.field("Model", value),
             Object::Instance(value) => struct_format.field("Instance", value),
+            Object::Array(array) => struct_format.field("Array", array.deref()),
             _ => struct_format.field("Unknown", &"Unknown".to_string())
         }.finish()
     }

@@ -1,5 +1,5 @@
 use crate::intermediate::{Token, CompileErrorList, TokenValue, CompileError};
-use crate::intermediate::ast::{Document, Definition, ModelDefinition, FunctionDefinition, Statement, ImplementDefinition, ApplyDefinition, LocalDefinition, IncludeDefinition, ReturnStatement, Expression, IdentifierExpression, IntegerExpression, FloatExpression, BooleanExpression, ThisExpression, NullExpression, PrefixExpression, IfExpression, InfixExpression, CallExpression, StringExpression, InstanceGetExpression, LocalStatement};
+use crate::intermediate::ast::{Document, Definition, ModelDefinition, FunctionDefinition, Statement, ImplementDefinition, ApplyDefinition, LocalDefinition, IncludeDefinition, ReturnStatement, Expression, IdentifierExpression, IntegerExpression, FloatExpression, BooleanExpression, ThisExpression, NullExpression, PrefixExpression, IfExpression, InfixExpression, CallExpression, StringExpression, InstanceGetExpression, LocalStatement, ArrayExpression};
 use crate::frontend::lexer::lex;
 use std::slice::Iter;
 use std::mem::discriminant;
@@ -227,39 +227,16 @@ impl<'a> ParserState<'a> {
         }
     }
 
-    fn parse_start_expression(&mut self) -> Option<Expression> {
-        match self.current_token.value {
-            TokenValue::Identifier(_) => self.parse_identifier_expression(),
-            TokenValue::Integer(_) => self.parse_integer_expression(),
-            TokenValue::Float(_) => self.parse_float_expression(),
-            TokenValue::String(_) => self.parse_string_expression(),
-            TokenValue::True | TokenValue::False => self.parse_boolean_expression(),
-            TokenValue::This | TokenValue::Null => self.parse_keyword_expression(),
-            TokenValue::Minus | TokenValue::Not => self.parse_prefix_expression(),
-            TokenValue::LeftParentheses => self.parse_group_expression(),
-            TokenValue::If => self.parse_if_expression(),
-            _ => {
-                self.push_error(&self.current_token.clone(), "Unexpect token when parse expression".to_string());
-                None
-            }
-        }
-    }
-
-    fn parse_call_expression(&mut self, expression: Expression) -> Option<Expression> {
-        self.expect_token(TokenValue::LeftParentheses);
-
-        let token = self.current_token.clone();
-        self.next_token();
-
-        let mut parameters = Vec::new();
+    fn parse_comma_expressions(&mut self, end_tokens: &[ TokenValue ]) -> Option<Vec<Expression>> {
+        let mut values = Vec::new();
 
         let mut last_comma = None;
 
-        while !self.current_token_is_any_of(&[ TokenValue::RightParentheses, TokenValue::Eof ]) {
+        while !self.current_token_is_any_of(end_tokens) {
             last_comma = None;
 
             if let Some(parameter) = self.parse_expression(SymbolPriority::Lowest) {
-                parameters.push(parameter);
+                values.push(parameter);
 
                 if self.current_token.value == TokenValue::Comma {
                     last_comma = Some(self.current_token.clone());
@@ -275,17 +252,63 @@ impl<'a> ParserState<'a> {
             self.push_error(&token, "Unexpect token".to_string());
         };
 
-        if parameters.len() > 255 {
-            self.push_error(&self.current_token.clone(), "function can not have more than 255 parameters".to_string());
+        Some(values)
+    }
+
+    fn parse_array_expression(&mut self) -> Option<Expression> {
+        self.expect_token(TokenValue::LeftBracket);
+
+        let token = self.current_token.clone();
+        self.next_token();
+
+        if let Some(values) = self.parse_comma_expressions(&[ TokenValue::RightBracket, TokenValue::Eof ]) {
+            self.expect_and_pop_token(TokenValue::RightBracket);
+
+            Some(Expression::Array(ArrayExpression {
+                token,
+                values
+            }))
+        } else {
+            None
         }
+    }
 
-        self.expect_and_pop_token(TokenValue::RightParentheses);
+    fn parse_start_expression(&mut self) -> Option<Expression> {
+        match self.current_token.value {
+            TokenValue::Identifier(_) => self.parse_identifier_expression(),
+            TokenValue::Integer(_) => self.parse_integer_expression(),
+            TokenValue::Float(_) => self.parse_float_expression(),
+            TokenValue::String(_) => self.parse_string_expression(),
+            TokenValue::True | TokenValue::False => self.parse_boolean_expression(),
+            TokenValue::This | TokenValue::Null => self.parse_keyword_expression(),
+            TokenValue::Minus | TokenValue::Not => self.parse_prefix_expression(),
+            TokenValue::LeftParentheses => self.parse_group_expression(),
+            TokenValue::LeftBracket => self.parse_array_expression(),
+            TokenValue::If => self.parse_if_expression(),
+            _ => {
+                self.push_error(&self.current_token.clone(), "Unexpect token when parse expression".to_string());
+                None
+            }
+        }
+    }
 
-        Some(Expression::Call(CallExpression {
-            token,
-            function: Box::new(expression),
-            parameters: parameters
-        }))
+    fn parse_call_expression(&mut self, expression: Expression) -> Option<Expression> {
+        self.expect_token(TokenValue::LeftParentheses);
+
+        let token = self.current_token.clone();
+        self.next_token();
+
+        if let Some(parameters) = self.parse_comma_expressions(&[ TokenValue::RightParentheses, TokenValue::Eof ]) {
+            self.expect_and_pop_token(TokenValue::RightParentheses);
+
+            Some(Expression::Call(CallExpression {
+                token,
+                function: Box::new(expression),
+                parameters
+            }))
+        } else {
+            None
+        }
     }
 
     fn parse_instance_get_expression(&mut self, expression: Expression) -> Option<Expression> {
@@ -328,9 +351,9 @@ impl<'a> ParserState<'a> {
     }
 
     fn parse_infix_expression(&mut self, expression: Expression) -> Option<Expression> {
-        // if '-' or '(' is the first token at line, it's not a infix expression
+        // if '-' or '(' or '[' is the first token at line, it's not a infix expression
         match self.current_token.value {
-            TokenValue::LeftParentheses | TokenValue::Minus => {
+            TokenValue::Minus | TokenValue::LeftParentheses | TokenValue::LeftBracket => {
                 if self.current_token.position.line > self.last_token.position.line {
                     return None;
                 };

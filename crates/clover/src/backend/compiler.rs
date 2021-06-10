@@ -5,7 +5,7 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
@@ -301,6 +301,14 @@ impl CompilerState {
         function_state.emit(OpCode::Call.to_instruction(call_expression.parameters.len() as u64), call_expression.token.position);
     }
 
+    fn compile_array_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, array_expression: &ArrayExpression) {
+        for expression in &array_expression.values {
+            self.compile_expression(context, function_state, expression);
+        };
+        
+        function_state.emit(OpCode::Array.to_instruction(array_expression.values.len() as u64), array_expression.token.position);
+    }
+
     fn compile_instance_get_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, instance_get_expression: &InstanceGetExpression) {
         self.compile_expression(context, function_state, instance_get_expression.instance.deref());
         self.compile_expression(context, function_state, instance_get_expression.index.deref());
@@ -344,6 +352,7 @@ impl CompilerState {
             Expression::String(string_expression) => self.compile_string_expression(context, function_state, string_expression),
             Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
             Expression::Null(null_expression) => { function_state.emit_opcode(OpCode::PushNull, null_expression.token.position); },
+            Expression::Array(array_expression) => self.compile_array_expression(context, function_state, array_expression),
             Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
             Expression::Prefix(prefix_expression) => self.compile_prefix_expression(context, function_state, prefix_expression),
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),

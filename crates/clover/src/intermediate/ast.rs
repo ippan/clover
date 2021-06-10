@@ -11,6 +11,7 @@ pub enum Expression {
     Float(FloatExpression),
     String(StringExpression),
     Boolean(BooleanExpression),
+    Array(ArrayExpression),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
     If(IfExpression),
@@ -51,6 +52,12 @@ pub struct StringExpression {
 #[derive(Clone, Debug)]
 pub struct BooleanExpression {
     pub token: Token
+}
+
+#[derive(Clone, Debug)]
+pub struct ArrayExpression {
+    pub token: Token,
+    pub values: Vec<Expression>
 }
 
 #[derive(Clone, Debug)]

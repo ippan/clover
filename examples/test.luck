@@ -32,4 +32,10 @@ function main()
     else
         20
     end
+
+    local c =[ 1, 2, 3 ]
+
+    c[1] = 5
+
+    c[1]
 end
