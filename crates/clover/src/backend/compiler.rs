@@ -5,13 +5,14 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
 use std::ops::Deref;
+use crate::runtime::opcode::OpCode::PushNull;
 
 #[derive(Debug)]
 pub struct CompilerContext {
@@ -202,8 +203,8 @@ impl CompilerState {
 
     fn compile_boolean_expression(&mut self, _context: &mut CompilerContext, function_state: &mut FunctionState, bool_expression: &BooleanExpression) {
         match bool_expression.token.value {
-            TokenValue::True => function_state.emit(OpCode::PushBoolean.to_instruction(1), bool_expression.token.position),
-            TokenValue::False => function_state.emit(OpCode::PushBoolean.to_instruction(0), bool_expression.token.position),
+            TokenValue::True => { function_state.emit(OpCode::PushBoolean.to_instruction(1), bool_expression.token.position); },
+            TokenValue::False => { function_state.emit(OpCode::PushBoolean.to_instruction(0), bool_expression.token.position); },
             _ => self.errors.push_error(&bool_expression.token, "Unexpect token")
         }
     }
@@ -283,8 +284,8 @@ impl CompilerState {
         self.compile_expression(context, function_state, prefix_expression.right.deref());
 
         match prefix_expression.prefix.value {
-            TokenValue::Minus => function_state.emit_opcode(OpCode::Negative, prefix_expression.prefix.position),
-            TokenValue::Not => function_state.emit_opcode(OpCode::Not, prefix_expression.prefix.position),
+            TokenValue::Minus => { function_state.emit_opcode(OpCode::Negative, prefix_expression.prefix.position); },
+            TokenValue::Not => { function_state.emit_opcode(OpCode::Not, prefix_expression.prefix.position); },
             _ => self.errors.push_error(&prefix_expression.prefix, "unknown operation")
         }
     }
@@ -307,19 +308,49 @@ impl CompilerState {
         function_state.emit_opcode(OpCode::InstanceGet, instance_get_expression.token.position);
     }
 
+    fn compile_if_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, if_expression: &IfExpression) {
+        self.compile_expression(context, function_state, if_expression.condition.deref());
+
+        let true_part_instruction_index = function_state.emit_opcode_without_position(OpCode::JumpIf);
+
+        if let Some(statements) = if_expression.false_part.as_ref() {
+            for statement in statements {
+                self.compile_statement(context, function_state, statement);
+            }
+
+            function_state.remove_pop_or_push_null();
+        } else {
+            function_state.emit_opcode_without_position(OpCode::PushNull);
+        };
+
+        let jump_to_end_instruction_index = function_state.emit_opcode_without_position(OpCode::Jump);
+
+        function_state.instructions[true_part_instruction_index] = OpCode::JumpIf.to_instruction(function_state.get_next_instruction_index() as u64);
+
+        for statement in &if_expression.true_part {
+            self.compile_statement(context, function_state, statement);
+        }
+
+        function_state.remove_pop_or_push_null();
+
+        function_state.instructions[jump_to_end_instruction_index] = OpCode::Jump.to_instruction(function_state.get_next_instruction_index() as u64);
+
+    }
+
     fn compile_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, expression: &Expression) {
         match expression {
             Expression::Integer(integer_expression) => self.compile_integer_expression(context, function_state, integer_expression),
             Expression::Float(float_expression) => self.compile_float_expression(context, function_state, float_expression),
             Expression::String(string_expression) => self.compile_string_expression(context, function_state, string_expression),
             Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
-            Expression::Null(null_expression) => function_state.emit_opcode(OpCode::PushNull, null_expression.token.position),
+            Expression::Null(null_expression) => { function_state.emit_opcode(OpCode::PushNull, null_expression.token.position); },
             Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
             Expression::Prefix(prefix_expression) => self.compile_prefix_expression(context, function_state, prefix_expression),
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
             Expression::Call(call_expression) => self.compile_call_expression(context, function_state, call_expression),
             Expression::InstanceGet(instance_get_expression) => self.compile_instance_get_expression(context, function_state, instance_get_expression),
             Expression::This(this_expression) => self.compile_this_expression(context, function_state, this_expression),
+            Expression::If(if_expression) => self.compile_if_expression(context, function_state, if_expression),
             _ => {}
         }
     }

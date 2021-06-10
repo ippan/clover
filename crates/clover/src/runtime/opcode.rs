@@ -47,6 +47,11 @@ pub enum OpCode {
 
     PushNewMap      = 0x41,
 
+    // operand -> position
+    Jump            = 0x51,
+    // operand -> position
+    JumpIf          = 0x52,
+
     Unknown         = 0xFF,
 }
 
@@ -84,6 +89,9 @@ impl Instruction {
             0x32 => OpCode::Call,
 
             0x41 => OpCode::PushNewMap,
+
+            0x51 => OpCode::Jump,
+            0x52 => OpCode::JumpIf,
 
             _ => OpCode::Unknown
         }

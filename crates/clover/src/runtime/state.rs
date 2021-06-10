@@ -19,11 +19,12 @@ macro_rules! ensure_type {
 pub struct Frame {
     pub locals: Vec<Object>,
     pub program_counter: usize,
-    pub function_index: usize
+    pub function_index: usize,
+    pub stack_size: usize
 }
 
 impl Frame {
-    pub fn new(local_count: usize, function_index: usize) -> Frame {
+    pub fn new(local_count: usize, function_index: usize, stack_size: usize) -> Frame {
         let mut locals = Vec::new();
         for _ in 0..local_count {
             locals.push(Object::Null);
@@ -32,7 +33,8 @@ impl Frame {
         Frame {
             locals,
             program_counter: 0,
-            function_index
+            function_index,
+            stack_size
         }
     }
 }
@@ -80,7 +82,7 @@ impl State {
             return Err(RuntimeError::new("too many parameters", Position::none()));
         }
 
-        let mut frame = Frame::new(function.local_count, function_index);
+        let mut frame = Frame::new(function.local_count, function_index, self.stack.len());
 
         for (i, object) in parameters.iter().enumerate() {
             frame.locals[i] = object.clone();
@@ -175,6 +177,23 @@ impl State {
 
     pub fn push_frame(&mut self, frame: Frame) {
         self.frames.push_back(frame);
+    }
+
+    fn pop_frame(&mut self) {
+        let frame = self.frames.pop_back().unwrap();
+
+        if self.stack.len() > frame.stack_size + 1 {
+            return;
+        };
+
+        let return_value = self.pop().unwrap();
+
+        // clean up stack
+        while self.stack.len() > frame.stack_size {
+            self.pop();
+        };
+
+        self.push(return_value);
     }
 
     pub fn top(&self) -> Object {
@@ -320,7 +339,7 @@ impl State {
             },
             OpCode::PushNull => self.push(Object::Null),
             OpCode::PushBoolean => self.push(Object::Boolean(instruction.operand() == 1)),
-            OpCode::Return => { self.frames.pop_back(); },
+            OpCode::Return => { self.pop_frame(); },
 
             OpCode::LocalGet => self.push(self.current_frame().locals.get(instruction.operand() as usize).unwrap().clone()),
             OpCode::LocalSet => { self.current_frame_as_mut().locals[instruction.operand() as usize] = self.top(); },
@@ -365,6 +384,13 @@ impl State {
             OpCode::Negative => {
                 let target = self.pop().unwrap();
                 self.push(negative_operation(self, &target)?)
+            },
+            OpCode::Jump => { self.current_frame_as_mut().program_counter = instruction.operand() as usize; },
+            OpCode::JumpIf => {
+                let object = self.pop().unwrap();
+                if object.to_bool() {
+                    self.current_frame_as_mut().program_counter = instruction.operand() as usize;
+                };
             },
             _ => {
                 // not implemented

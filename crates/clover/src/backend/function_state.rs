@@ -39,17 +39,23 @@ impl FunctionState {
         }
     }
 
-    pub fn emit(&mut self, instruction: Instruction, position: Position) {
+    pub fn emit(&mut self, instruction: Instruction, position: Position) -> usize {
+        let index = self.instructions.len();
         self.instructions.push(instruction);
         self.positions.push(position);
+        index
     }
 
-    pub fn emit_opcode(&mut self, opcode: OpCode, position: Position) {
-        self.emit(opcode.to_instruction(0), position);
+    pub fn emit_opcode(&mut self, opcode: OpCode, position: Position) -> usize {
+        self.emit(opcode.to_instruction(0), position)
     }
 
-    pub fn emit_opcode_without_position(&mut self, opcode: OpCode) {
-        self.emit_opcode(opcode, self.get_last_position());
+    pub fn emit_opcode_without_position(&mut self, opcode: OpCode) -> usize {
+        self.emit_opcode(opcode, self.get_last_position())
+    }
+
+    pub fn get_next_instruction_index(&self) -> usize {
+        self.instructions.len()
     }
 
     pub fn remove_pop_or_push_null(&mut self) {
