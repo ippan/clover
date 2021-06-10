@@ -4,5 +4,5 @@ mod io;
 
 
 pub fn clover_inject_to(state: &mut State) {
-    state.add_native_function(io::print, Some("print"));
+    state.add_native_function("print", io::print);
 }

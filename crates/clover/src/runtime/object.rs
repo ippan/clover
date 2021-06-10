@@ -11,6 +11,8 @@ pub fn make_reference<T>(object: T) -> Reference<T> {
     Rc::new(RefCell::new(object))
 }
 
+pub type NativeFunction = fn(&mut State, &[Object]) -> Result<Object, RuntimeError>;
+
 #[derive(Debug)]
 pub struct ModelInstance {
     pub model_index: usize,
@@ -29,7 +31,6 @@ pub trait NativeModelInstance {
     fn instance_set(&mut self, index: Object, value: Object) -> Result<(), RuntimeError>;
 }
 
-#[derive(Clone)]
 pub enum Object {
     Integer(i64),
     Float(f64),
@@ -39,8 +40,8 @@ pub enum Object {
 
     Function(usize),
     InstanceFunction(Box<Object>, usize),
-    NativeFunction(usize),
-    InstanceNativeFunction(Box<Object>, usize),
+    NativeFunction(NativeFunction),
+    InstanceNativeFunction(Box<Object>, NativeFunction),
 
     Model(usize),
     NativeModel(usize),
@@ -67,6 +68,27 @@ impl fmt::Debug for Object {
             Object::Instance(value) => struct_format.field("Instance", value),
             _ => struct_format.field("Unknown", &"Unknown".to_string())
         }.finish()
+    }
+}
+
+impl Clone for Object {
+    fn clone(&self) -> Self {
+        match self {
+            Object::Integer(value) => Object::Integer(*value),
+            Object::Float(value) => Object::Float(*value),
+            Object::String(value) => Object::String(value.clone()),
+            Object::Boolean(value) => Object::Boolean(*value),
+            Object::Null => Object::Null,
+            Object::Function(index) => Object::Function(*index),
+            Object::InstanceFunction(this, index) => Object::InstanceFunction(this.clone(), *index),
+            Object::NativeFunction(function) => Object::NativeFunction(*function),
+            Object::InstanceNativeFunction(this, function) => Object::InstanceNativeFunction(this.clone(), *function),
+            Object::Model(index) => Object::Model(*index),
+            Object::NativeModel(index) => Object::Model(*index),
+            Object::Instance(instance) => Object::Instance(instance.clone()),
+            Object::NativeInstance(instance) => Object::NativeInstance(instance.clone()),
+            Object::Array(value) => Object::Array(value.clone())
+        }
     }
 }
 

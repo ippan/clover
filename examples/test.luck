@@ -26,6 +26,7 @@ implement Test
 end
 
 function main()
+    print("i am here")
     local a = if true
         10
     else

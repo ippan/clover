@@ -1,6 +1,6 @@
 use crate::runtime::program::{Program, RuntimeError};
 use std::collections::{HashMap, LinkedList};
-use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, NativeModel};
+use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, NativeModel, NativeFunction};
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::{Deref, DerefMut};
@@ -39,12 +39,9 @@ impl Frame {
     }
 }
 
-pub type NativeFunction = fn(&mut State, &[Object]) -> Result<Object, RuntimeError>;
-
 pub struct State {
     pub globals: HashMap<String, Object>,
     pub locals: Vec<Object>,
-    pub native_functions: Vec<NativeFunction>,
     pub native_models: Vec<Reference<dyn NativeModel>>,
     pub stack: LinkedList<Object>,
     pub frames: LinkedList<Frame>,
@@ -66,7 +63,6 @@ impl State {
         State {
             globals: HashMap::new(),
             locals,
-            native_functions: Vec::new(),
             native_models: Vec::new(),
             stack: LinkedList::new(),
             frames: LinkedList::new(),
@@ -113,23 +109,18 @@ impl State {
         Ok(())
     }
 
-    fn call_native_function_by_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
-
-        if let Some(function) = self.native_functions.get(function_index) {
+    fn call_native_function(&mut self, function: NativeFunction, parameters: &[ Object ]) -> Result<(), RuntimeError> {
             let result = function(self, parameters)?;
             self.push(result);
             Ok(())
-        } else {
-            Err(RuntimeError::new("call not found native function", self.last_position()))
-        }
     }
 
     fn call_object(&mut self, object: Object, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         match object {
             Object::Function(function_index) => self.call_function_by_index(function_index, parameters),
             Object::InstanceFunction(model, function_index) => self.call_function_by_index(function_index,&make_instance_call_parameters(model.deref().clone(), parameters)),
-            Object::NativeFunction(function_index) => self.call_native_function_by_index(function_index, parameters),
-            Object::InstanceNativeFunction(model, function_index) => self.call_native_function_by_index(function_index, &make_instance_call_parameters(model.deref().clone(), parameters)),
+            Object::NativeFunction(function) => self.call_native_function(function, parameters),
+            Object::InstanceNativeFunction(model, function) => self.call_native_function(function, &make_instance_call_parameters(model.deref().clone(), parameters)),
             Object::Model(model_index) => self.call_model_by_index(model_index, parameters),
             Object::NativeModel(model_index) => Ok(()),
             _ => Err(RuntimeError::new(&format!("can not call {:?}", object), self.last_position()))
@@ -436,15 +427,8 @@ impl State {
         self.execute_by_function_index(self.program.entry_point, &[])
     }
 
-    pub fn add_native_function(&mut self, function: NativeFunction, name: Option<&str>) -> usize {
-        let index = self.native_functions.len();
-        self.native_functions.push(function);
-
-        if let Some(global_name) = name {
-            self.globals.insert(global_name.to_string(), Object::NativeFunction(index));
-        };
-
-        index
+    pub fn add_native_function(&mut self, name: &str, function: NativeFunction)  {
+        self.globals.insert(name.to_string(), Object::NativeFunction(function));
     }
 
     pub fn add_native_model(&mut self, native_model: Reference<dyn NativeModel>, name: Option<&str>) -> usize {
