@@ -1,5 +1,5 @@
 use crate::intermediate::{Token, CompileErrorList, TokenValue, CompileError};
-use crate::intermediate::ast::{Document, Definition, ModelDefinition, FunctionDefinition, Statement, ImplementDefinition, ApplyDefinition, LocalDefinition, IncludeDefinition, ReturnStatement, Expression, IdentifierExpression, IntegerExpression, FloatExpression, BooleanExpression, ThisExpression, NullExpression, PrefixExpression, IfExpression, InfixExpression, CallExpression, StringExpression, InstanceGetExpression, LocalStatement, ArrayExpression};
+use crate::intermediate::ast::{Document, Definition, ModelDefinition, FunctionDefinition, Statement, ImplementDefinition, ApplyDefinition, LocalDefinition, IncludeDefinition, ReturnStatement, Expression, IdentifierExpression, IntegerExpression, FloatExpression, BooleanExpression, ThisExpression, NullExpression, PrefixExpression, IfExpression, InfixExpression, CallExpression, StringExpression, InstanceGetExpression, LocalStatement, ArrayExpression, IndexGetExpression};
 use crate::frontend::lexer::lex;
 use std::slice::Iter;
 use std::mem::discriminant;
@@ -315,15 +315,22 @@ impl<'a> ParserState<'a> {
         let token = self.current_token.clone();
         self.next_token();
 
-        let index = match token.value.clone() {
+        match token.value.clone() {
             TokenValue::Dot => {
                 let identifier_token = self.current_token.clone();
                 if let TokenValue::Identifier(identifier) = identifier_token.value.clone() {
                     self.next_token();
-                    Expression::String(StringExpression { token: Token::new(TokenValue::String(identifier), identifier_token.position) })
+                    let index = Expression::String(StringExpression { token: Token::new(TokenValue::String(identifier), identifier_token.position) });
+
+                    Some(Expression::InstanceGet(InstanceGetExpression {
+                        token,
+                        instance: Box::new(expression),
+                        index: Box::new(index)
+                    }))
+
                 } else {
                     self.push_error(&identifier_token, "Unexpect Token".to_string());
-                    return None;
+                    None
                 }
             },
             TokenValue::LeftBracket => {
@@ -332,22 +339,20 @@ impl<'a> ParserState<'a> {
                         return None;
                     };
 
-                    index
+                    Some(Expression::IndexGet(IndexGetExpression {
+                        token,
+                        instance: Box::new(expression),
+                        index: Box::new(index)
+                    }))
                 } else {
-                    return None;
+                    None
                 }
             }
             _ => {
                 self.push_error(&token, "Unexpect Token".to_string());
-                return None;
+                None
             }
-        };
-
-        Some(Expression::InstanceGet(InstanceGetExpression {
-            token,
-            instance: Box::new(expression),
-            index: Box::new(index)
-        }))
+        }
     }
 
     fn parse_infix_expression(&mut self, expression: Expression) -> Option<Expression> {

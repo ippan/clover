@@ -206,6 +206,35 @@ impl State {
 
     // instance get for model
     fn instance_get_model(&mut self, model_index: usize, index: Object) -> Result<(), RuntimeError> {
+        self.index_get_model(model_index, index)
+    }
+
+    fn instance_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+        self.index_get_model_instance(model_instance, index)
+    }
+
+    fn instance_get_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+        self.index_get_array(array, index)
+    }
+
+    fn instance_get(&mut self) -> Result<(), RuntimeError> {
+        let index = self.pop().unwrap();
+        let instance = self.pop().unwrap();
+
+        match instance {
+            Object::Model(model_index) => self.instance_get_model(model_index, index)?,
+            Object::Instance(model_instance) => self.instance_get_model_instance(model_instance, index)?,
+            Object::Array(array) => self.instance_get_array(array, index)?,
+            _ => {
+                return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
+            }
+        };
+
+        Ok(())
+    }
+
+    // index get for model
+    fn index_get_model(&mut self, model_index: usize, index: Object) -> Result<(), RuntimeError> {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_index).unwrap();
 
@@ -219,7 +248,7 @@ impl State {
         Ok(())
     }
 
-    fn instance_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+    fn index_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_instance.borrow().deref().model_index).unwrap();
 
@@ -251,7 +280,7 @@ impl State {
         Ok(())
     }
 
-    fn instance_get_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+    fn index_get_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
         match index {
             Object::Integer(i) => {
                 if i < 0 || i >= array.borrow().deref().len() as i64 {
@@ -268,14 +297,14 @@ impl State {
         Ok(())
     }
 
-    fn instance_get(&mut self) -> Result<(), RuntimeError> {
+    fn index_get(&mut self) -> Result<(), RuntimeError> {
         let index = self.pop().unwrap();
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Model(model_index) => self.instance_get_model(model_index, index)?,
-            Object::Instance(model_instance) => self.instance_get_model_instance(model_instance, index)?,
-            Object::Array(array) => self.instance_get_array(array, index)?,
+            Object::Model(model_index) => self.index_get_model(model_index, index)?,
+            Object::Instance(model_instance) => self.index_get_model_instance(model_instance, index)?,
+            Object::Array(array) => self.index_get_array(array, index)?,
             _ => {
                 return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
             }
@@ -285,6 +314,33 @@ impl State {
     }
 
     fn instance_set_model_instance_by_index(&mut self, model_instance: Reference<ModelInstance>, index: usize) -> Result<(), RuntimeError> {
+        self.index_set_model_instance_by_index(model_instance, index)
+    }
+
+    fn instance_set_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+        self.index_set_model_instance(model_instance, index)
+    }
+
+    fn instance_set_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+        self.index_set_array(array, index)
+    }
+
+    fn instance_set(&mut self) -> Result<(), RuntimeError> {
+        let index = self.pop().unwrap();
+        let instance = self.pop().unwrap();
+
+        match instance {
+            Object::Instance(model_instance) => self.instance_set_model_instance(model_instance, index)?,
+            Object::Array(array) => self.instance_set_array(array, index)?,
+            _ => {
+                return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
+            }
+        };
+
+        Ok(())
+    }
+
+    fn index_set_model_instance_by_index(&mut self, model_instance: Reference<ModelInstance>, index: usize) -> Result<(), RuntimeError> {
         if let Some(object) = model_instance.borrow_mut().properties.get_mut(index as usize) {
             *object = self.top();
             Ok(())
@@ -293,23 +349,23 @@ impl State {
         }
     }
 
-    fn instance_set_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+    fn index_set_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_instance.borrow().deref().model_index).unwrap();
 
             // have property?
             if let Some(&property_index) = model.property_indices.get(key) {
-                self.instance_set_model_instance_by_index(model_instance, property_index)?;
+                self.index_set_model_instance_by_index(model_instance, property_index)?;
             };
 
         } else if let Object::Integer(i) = &index {
-            self.instance_set_model_instance_by_index(model_instance, *i as usize)?;
+            self.index_set_model_instance_by_index(model_instance, *i as usize)?;
         }
 
         Ok(())
     }
 
-    fn instance_set_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+    fn index_set_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
         match index {
             Object::Integer(i) => {
                 if i < 0 || i >= array.borrow().deref().len() as i64 {
@@ -326,13 +382,13 @@ impl State {
         Ok(())
     }
 
-    fn instance_set(&mut self) -> Result<(), RuntimeError> {
+    fn index_set(&mut self) -> Result<(), RuntimeError> {
         let index = self.pop().unwrap();
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Instance(model_instance) => self.instance_set_model_instance(model_instance, index)?,
-            Object::Array(array) => self.instance_set_array(array, index)?,
+            Object::Instance(model_instance) => self.index_set_model_instance(model_instance, index)?,
+            Object::Array(array) => self.index_set_array(array, index)?,
             _ => {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
             }
@@ -416,6 +472,8 @@ impl State {
             },
             OpCode::InstanceGet => self.instance_get()?,
             OpCode::InstanceSet => self.instance_set()?,
+            OpCode::IndexGet => self.index_get()?,
+            OpCode::IndexSet => self.index_set()?,
             OpCode::Call => self.execute_call_opcode(instruction.operand() as usize)?,
             OpCode::Array => self.push_array(instruction.operand() as usize)?,
             OpCode::Operation => self.binary_operation(instruction.operand() as usize)?,

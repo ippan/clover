@@ -16,7 +16,8 @@ pub enum Expression {
     Infix(InfixExpression),
     If(IfExpression),
     Call(CallExpression),
-    InstanceGet(InstanceGetExpression)
+    InstanceGet(InstanceGetExpression),
+    IndexGet(IndexGetExpression)
 }
 
 #[derive(Clone, Debug)]
@@ -89,6 +90,13 @@ pub struct CallExpression {
 
 #[derive(Clone, Debug)]
 pub struct InstanceGetExpression {
+    pub token: Token,
+    pub instance: Box<Expression>,
+    pub index: Box<Expression>
+}
+
+#[derive(Clone, Debug)]
+pub struct IndexGetExpression {
     pub token: Token,
     pub instance: Box<Expression>,
     pub index: Box<Expression>

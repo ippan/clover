@@ -34,6 +34,8 @@ pub enum OpCode {
 
     InstanceSet     = 0x13,
     InstanceGet     = 0x14,
+    IndexSet        = 0x15,
+    IndexGet        = 0x16,
 
     // operand is operator
     Operation       = 0x21,
@@ -83,6 +85,9 @@ impl Instruction {
             0x12 => OpCode::GlobalGet,
             0x13 => OpCode::InstanceSet,
             0x14 => OpCode::InstanceGet,
+            0x15 => OpCode::IndexSet,
+            0x16 => OpCode::IndexGet,
+
 
             0x21 => OpCode::Operation,
             0x22 => OpCode::Not,

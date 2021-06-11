@@ -5,7 +5,7 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression, IndexGetExpression};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
@@ -250,6 +250,12 @@ impl CompilerState {
 
                 function_state.emit_opcode(OpCode::InstanceSet, instance_get_expression.token.position);
             },
+            Expression::IndexGet(index_get_expression) => {
+                self.compile_expression(context, function_state, index_get_expression.instance.deref());
+                self.compile_expression(context, function_state, index_get_expression.index.deref());
+
+                function_state.emit_opcode(OpCode::IndexSet, index_get_expression.token.position);
+            },
             _ => self.errors.push_error(&infix_expression.infix, "can not assign")
         }
     }
@@ -316,6 +322,13 @@ impl CompilerState {
         function_state.emit_opcode(OpCode::InstanceGet, instance_get_expression.token.position);
     }
 
+    fn compile_index_get_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, index_get_expression: &IndexGetExpression) {
+        self.compile_expression(context, function_state, index_get_expression.instance.deref());
+        self.compile_expression(context, function_state, index_get_expression.index.deref());
+
+        function_state.emit_opcode(OpCode::IndexGet, index_get_expression.token.position);
+    }
+
     fn compile_if_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, if_expression: &IfExpression) {
         self.compile_expression(context, function_state, if_expression.condition.deref());
 
@@ -358,6 +371,7 @@ impl CompilerState {
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
             Expression::Call(call_expression) => self.compile_call_expression(context, function_state, call_expression),
             Expression::InstanceGet(instance_get_expression) => self.compile_instance_get_expression(context, function_state, instance_get_expression),
+            Expression::IndexGet(index_get_expression) => self.compile_index_get_expression(context, function_state, index_get_expression),
             Expression::This(this_expression) => self.compile_this_expression(context, function_state, this_expression),
             Expression::If(if_expression) => self.compile_if_expression(context, function_state, if_expression),
             _ => {}
