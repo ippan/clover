@@ -23,37 +23,16 @@ implement Test
         this.b
     end
 
+    function _eq(left, right)
+        left.a == right.a and left.b == right.b and left.c == right.c
+    end
+
 end
 
 function main()
-    print("i am here")
-    local b = 30
+    local a = Test.new()
+    local b = Test.new()
 
-    local a = if b < 20
-        50
-    elseif b < 50
-        20
-    end
+    print(a == b)
 
-    print(a)
-    b += 1
-    print(b)
-
-    local c =[ 1, !(4 == 5), 4 != 5 ]
-
-    for i in c
-        print("hello" + i)
-    end
-
-    for i in 10
-        print(i)
-
-        if i > 5
-            break
-        end
-
-        print(i * 2)
-    end
-
-    c
 end

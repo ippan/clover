@@ -760,6 +760,8 @@ fn get_operation_instruction_by_token(token: &Token) -> Option<Instruction> {
         TokenValue::GreaterEqual => 8,
         TokenValue::LessEqual => 9,
 
+        TokenValue::And => 256 | 1,
+        TokenValue::Or => 256 | 2,
 
         _ => return None
     };

@@ -1,4 +1,4 @@
-use crate::runtime::object::Object;
+use crate::runtime::object::{Object, Reference, ModelInstance};
 use crate::runtime::program::RuntimeError;
 use crate::runtime::state::State;
 
@@ -235,14 +235,49 @@ fn string_operation(state: &State, left: &str, right: &Object, operand: usize) -
     }
 }
 
-pub fn binary_operation(state: &State, left: &Object, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
-    match left {
-        Object::Integer(value) => integer_operation(state, *value, right, operand),
-        Object::Float(value) => float_operation(state, *value, right, operand),
-        Object::String(value) => string_operation(state, value, right, operand),
+fn model_instance_operation(state: &mut State, left: Reference<ModelInstance>, right: &Object, operand: usize) -> Result<(), RuntimeError> {
+    if operand >= META_METHODS.len() {
+        return Err(RuntimeError::new("unknown operation", state.last_position()));
+    };
 
-        _ => Err(RuntimeError::new("unknown object", state.last_position()))
+    let meta_method_name = META_METHODS[operand];
+
+    if let Some(meta_method_index) = state.program.models[left.borrow().model_index].functions.get(meta_method_name) {
+        state.call_function_by_index(*meta_method_index, &[ Object::Instance(left.clone()), right.clone() ])?;
+
+        Ok(())
+    } else {
+        Err(RuntimeError::new("meta method does not exists", state.last_position()))
     }
+}
+
+pub fn binary_operation(state: &mut State, left: &Object, right: &Object, operand: usize) -> Result<(), RuntimeError> {
+    if operand & 256 > 0 {
+        state.push(match operand & 255 {
+            // and
+            1 => Object::Boolean(left.to_bool() && right.to_bool()),
+            // or
+            2 => Object::Boolean(left.to_bool() || right.to_bool()),
+
+            _ => { return Err(RuntimeError::new("unknown operation", state.last_position())); }
+        });
+
+        return Ok(());
+    };
+
+    if let Object::Instance(model_instance) = left {
+        return model_instance_operation(state, model_instance.clone(), right, operand);
+    };
+
+    state.push(match left {
+        Object::Integer(value) => integer_operation(state, *value, right, operand)?,
+        Object::Float(value) => float_operation(state, *value, right, operand)?,
+        Object::String(value) => string_operation(state, value, right, operand)?,
+
+        _ => { return Err(RuntimeError::new("unknown object", state.last_position())); }
+    });
+
+    Ok(())
 }
 
 pub fn negative_operation(state: &State, target: &Object) -> Result<Object, RuntimeError> {

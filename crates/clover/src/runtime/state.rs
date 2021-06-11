@@ -70,7 +70,7 @@ impl State {
         }
     }
 
-    fn call_function_by_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
+    pub fn call_function_by_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         let function = self.program.functions.get(function_index).unwrap();
 
         // function index is checked outside, no need to check here
@@ -415,9 +415,7 @@ impl State {
         let right = self.pop().unwrap();
         let left = self.pop().unwrap();
 
-        let result = binary_operation(self, &left, &right, operand)?;
-
-        self.push(result);
+        binary_operation(self, &left, &right, operand)?;
 
         Ok(())
     }
