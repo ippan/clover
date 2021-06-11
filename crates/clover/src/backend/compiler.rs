@@ -12,7 +12,6 @@ use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
 use std::ops::Deref;
-use crate::runtime::opcode::OpCode::{PushNull, JumpIf, Jump};
 
 #[derive(Debug)]
 pub struct CompilerContext {
@@ -413,8 +412,7 @@ impl CompilerState {
             Expression::InstanceGet(instance_get_expression) => self.compile_instance_get_expression(context, function_state, instance_get_expression),
             Expression::IndexGet(index_get_expression) => self.compile_index_get_expression(context, function_state, index_get_expression),
             Expression::This(this_expression) => self.compile_this_expression(context, function_state, this_expression),
-            Expression::If(if_expression) => self.compile_if_expression(context, function_state, if_expression),
-            _ => {}
+            Expression::If(if_expression) => self.compile_if_expression(context, function_state, if_expression)
         }
     }
 

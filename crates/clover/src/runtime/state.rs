@@ -3,7 +3,7 @@ use std::collections::{HashMap, LinkedList};
 use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, NativeModel, NativeFunction};
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use crate::runtime::operation::{binary_operation, negative_operation};
 
 macro_rules! ensure_type {
@@ -122,7 +122,6 @@ impl State {
             Object::NativeFunction(function) => self.call_native_function(function, parameters),
             Object::InstanceNativeFunction(model, function) => self.call_native_function(function, &make_instance_call_parameters(model.deref().clone(), parameters)),
             Object::Model(model_index) => self.call_model_by_index(model_index, parameters),
-            Object::NativeModel(model_index) => Ok(()),
             _ => Err(RuntimeError::new(&format!("can not call {:?}", object), self.last_position()))
         }
     }
@@ -536,7 +535,7 @@ impl State {
                     self.current_frame_as_mut().program_counter = instruction.operand() as usize;
                 };
             },
-            OpCode::ForNext => { self.for_next(instruction.operand() as usize); },
+            OpCode::ForNext => { self.for_next(instruction.operand() as usize)?; },
             OpCode::Iterate => { self.iterate(instruction.operand() as usize); },
             _ => {
                 // not implemented

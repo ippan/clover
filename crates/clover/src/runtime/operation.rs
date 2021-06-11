@@ -242,13 +242,13 @@ fn model_instance_operation(state: &mut State, left: Reference<ModelInstance>, r
 
     let meta_method_name = META_METHODS[operand];
 
-    if let Some(meta_method_index) = state.program.models[left.borrow().model_index].functions.get(meta_method_name) {
-        state.call_function_by_index(*meta_method_index, &[ Object::Instance(left.clone()), right.clone() ])?;
-
-        Ok(())
+    let meta_method_index = if let Some(index) = state.program.models[left.borrow().model_index].functions.get(meta_method_name) {
+        *index
     } else {
-        Err(RuntimeError::new("meta method does not exists", state.last_position()))
-    }
+        return Err(RuntimeError::new("meta method does not exists", state.last_position()));
+    };
+
+    state.call_function_by_index(meta_method_index, &[ Object::Instance(left.clone()), right.clone() ])
 }
 
 pub fn binary_operation(state: &mut State, left: &Object, right: &Object, operand: usize) -> Result<(), RuntimeError> {

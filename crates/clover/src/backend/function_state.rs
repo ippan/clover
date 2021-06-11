@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use crate::runtime::opcode::{Instruction, OpCode};
 use crate::intermediate::{Positions, Position};
-use crate::runtime::opcode::OpCode::Jump;
 
 pub type Scope = HashMap<String, usize>;
 
