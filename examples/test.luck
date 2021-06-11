@@ -27,15 +27,33 @@ end
 
 function main()
     print("i am here")
-    local a = if true
-        10
-    else
+    local b = 30
+
+    local a = if b < 20
+        50
+    elseif b < 50
         20
     end
 
-    local c =[ 1, 2, 3 ]
+    print(a)
+    b += 1
+    print(b)
 
-    c[1] = 5
+    local c =[ 1, !(4 == 5), 4 != 5 ]
 
-    c[1]
+    for i in c
+        print("hello" + i)
+    end
+
+    for i in 10
+        print(i)
+
+        if i > 5
+            break
+        end
+
+        print(i * 2)
+    end
+
+    c
 end

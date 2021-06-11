@@ -56,6 +56,10 @@ pub enum OpCode {
     Jump            = 0x51,
     // operand -> position
     JumpIf          = 0x52,
+    // operand -> enumerable index
+    ForNext         = 0x56,
+    // operand -> iterator index
+    Iterate         = 0x57,
 
     Unknown         = 0xFF,
 }
@@ -102,6 +106,9 @@ impl Instruction {
 
             0x51 => OpCode::Jump,
             0x52 => OpCode::JumpIf,
+
+            0x56 => OpCode::ForNext,
+            0x57 => OpCode::Iterate,
 
             _ => OpCode::Unknown
         }

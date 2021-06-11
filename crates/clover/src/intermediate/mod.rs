@@ -66,9 +66,11 @@ pub enum TokenValue {
     This,
     If,
     Else,
+    ElseIf,
     While,
     For,
     In,
+    Break,
 
     None
 }

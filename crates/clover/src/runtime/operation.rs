@@ -2,7 +2,7 @@ use crate::runtime::object::Object;
 use crate::runtime::program::RuntimeError;
 use crate::runtime::state::State;
 
-const META_METHODS: &[ &str ] = &[ "_add", "_sub", "_mul", "_div", "_mod", "_eq", "_gt", "_lt" ];
+const META_METHODS: &[ &str ] = &[ "_add", "_sub", "_mul", "_div", "_mod", "_eq", "_gt", "_lt", "_gte", "_lte" ];
 
 
 
@@ -79,6 +79,24 @@ fn integer_lt(state: &State, left: i64, right: &Object) -> Result<Object, Runtim
     }
 }
 
+fn integer_gte(state: &State, left: i64, right: &Object) -> Result<Object, RuntimeError> {
+    match right {
+        Object::Integer(value) => Ok(Object::Boolean(left >= *value)),
+        Object::Float(_) => float_gte(state, left as f64, right),
+
+        _ => Err(RuntimeError::new("can not sub integer with object", state.last_position()))
+    }
+}
+
+fn integer_lte(state: &State, left: i64, right: &Object) -> Result<Object, RuntimeError> {
+    match right {
+        Object::Integer(value) => Ok(Object::Boolean(left <= *value)),
+        Object::Float(_) => float_lte(state, left as f64, right),
+
+        _ => Err(RuntimeError::new("can not sub integer with object", state.last_position()))
+    }
+}
+
 fn integer_operation(state: &State, left: i64, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
     match operand {
         0 => integer_add(state, left, right),
@@ -89,11 +107,9 @@ fn integer_operation(state: &State, left: i64, right: &Object, operand: usize) -
         5 => integer_eq(state, left, right),
         6 => integer_gt(state, left, right),
         7 => integer_lt(state, left, right),
+        8 => integer_gte(state, left, right),
+        9 => integer_lte(state, left, right),
 
-        // 256 | 6
-        0x106 => Ok(Object::Boolean(integer_gt(state, left, right)?.to_bool() | integer_eq(state, left, right)?.to_bool())),
-        // 256 | 7
-        0x107 => Ok(Object::Boolean(integer_lt(state, left, right)?.to_bool() | integer_eq(state, left, right)?.to_bool())),
         _ => Err(RuntimeError::new("unknown operation", state.last_position()))
     }
 }
@@ -171,6 +187,24 @@ fn float_lt(state: &State, left: f64, right: &Object) -> Result<Object, RuntimeE
     }
 }
 
+fn float_gte(state: &State, left: f64, right: &Object) -> Result<Object, RuntimeError> {
+    match right {
+        Object::Float(value) => Ok(Object::Boolean(left >= *value)),
+        Object::Integer(value) => Ok(Object::Boolean(left >= *value as f64)),
+
+        _ => Err(RuntimeError::new("can not sub float with object", state.last_position()))
+    }
+}
+
+fn float_lte(state: &State, left: f64, right: &Object) -> Result<Object, RuntimeError> {
+    match right {
+        Object::Float(value) => Ok(Object::Boolean(left <= *value)),
+        Object::Integer(value) => Ok(Object::Boolean(left <= *value as f64)),
+
+        _ => Err(RuntimeError::new("can not sub float with object", state.last_position()))
+    }
+}
+
 fn float_operation(state: &State, left: f64, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
     match operand {
         0 => float_add(state, left, right),
@@ -181,11 +215,9 @@ fn float_operation(state: &State, left: f64, right: &Object, operand: usize) -> 
         5 => float_eq(state, left, right),
         6 => float_gt(state, left, right),
         7 => float_lt(state, left, right),
+        8 => float_gte(state, left, right),
+        9 => float_lte(state, left, right),
 
-        // 256 | 6
-        0x106 => Ok(Object::Boolean(float_gt(state, left, right)?.to_bool() | float_eq(state, left, right)?.to_bool())),
-        // 256 | 7
-        0x107 => Ok(Object::Boolean(float_lt(state, left, right)?.to_bool() | float_eq(state, left, right)?.to_bool())),
         _ => Err(RuntimeError::new("unknown operation", state.last_position()))
     }
 }

@@ -2,8 +2,11 @@ use std::collections::HashMap;
 
 use crate::runtime::opcode::{Instruction, OpCode};
 use crate::intermediate::{Positions, Position};
+use crate::runtime::opcode::OpCode::Jump;
 
 pub type Scope = HashMap<String, usize>;
+
+pub type BreakScope = Vec<usize>;
 
 #[derive(Debug, Clone)]
 pub struct FunctionState {
@@ -11,6 +14,7 @@ pub struct FunctionState {
     pub parameter_count: usize,
     pub local_count: usize,
     pub scopes: Vec<Scope>,
+    pub break_scopes: Vec<BreakScope>,
     pub instructions: Vec<Instruction>,
     pub positions: Positions
 }
@@ -22,6 +26,7 @@ impl FunctionState {
             parameter_count: 0,
             local_count: 0,
             scopes: Vec::new(),
+            break_scopes: Vec::new(),
             instructions: Vec::new(),
             positions: Positions::new()
         };
@@ -87,6 +92,22 @@ impl FunctionState {
         };
     }
 
+    pub fn emit_break(&mut self, position: Position) {
+        if self.break_scopes.len() == 0 {
+            return;
+        };
+
+        let index = self.emit_opcode(OpCode::Jump, position);
+
+        if let Some(break_scope) = self.break_scopes.last_mut() {
+            break_scope.push(index);
+        };
+    }
+
+    pub fn replace_instruction(&mut self, index: usize, instruction: Instruction) {
+        self.instructions[index] = instruction;
+    }
+
     pub fn find_local(&self, name: &str) -> Option<usize> {
         for scope in self.scopes.iter().rev() {
             if let Some(&index) = scope.get(name) {
@@ -105,6 +126,18 @@ impl FunctionState {
         self.scopes.pop();
     }
 
+    pub fn enter_break_scope(&mut self) { self.break_scopes.push(BreakScope::new()); }
+
+    pub fn exit_break_scrope(&mut self) {
+        let break_scope = self.break_scopes.pop().unwrap();
+        let jump_target = self.get_next_instruction_index() as u64;
+
+        for index in break_scope {
+            self.replace_instruction(index, OpCode::Jump.to_instruction(jump_target));
+        }
+
+    }
+
     pub fn define_local(&mut self, name: &str) -> Option<usize> {
         if let Some(scope) = self.scopes.last_mut() {
             if scope.contains_key(name) {
@@ -118,6 +151,12 @@ impl FunctionState {
         } else {
             None
         }
+    }
+
+    pub fn define_anonymous_local(&mut self) -> usize {
+        let index = self.local_count;
+        self.local_count += 1;
+        index
     }
 
 

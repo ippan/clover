@@ -422,6 +422,52 @@ impl State {
         Ok(())
     }
 
+    fn for_next(&mut self, enumerable_index: usize) -> Result<(), RuntimeError> {
+        let iterator_index = enumerable_index + 1;
+
+        let enumerable = self.current_frame().locals[enumerable_index].clone();
+
+        let iterator = if let Object::Integer(iterator) = self.current_frame().locals[iterator_index].clone() {
+            iterator
+        } else {
+            0
+        };
+
+        let jump = match enumerable {
+            Object::Integer(value) => {
+                if iterator < value {
+                    self.push(Object::Integer(iterator));
+                    false
+                } else {
+                    // iterator greater than enumerable object, finish loop
+                    true
+                }
+            },
+            Object::Array(array) => {
+                let index = iterator as usize;
+
+                if index < array.borrow().len() {
+                    self.push(array.borrow()[index].clone());
+                    false
+                } else {
+                    // iterator greater than enumerable array len, finish loop
+                    true
+                }
+            },
+            _ => true
+        };
+
+        self.push(Object::Boolean(jump));
+
+        Ok(())
+    }
+
+    fn iterate(&mut self, iterator_index: usize) {
+        if let Object::Integer(iterator) = self.current_frame().locals[iterator_index].clone() {
+            self.current_frame_as_mut().locals[iterator_index] = Object::Integer(iterator + 1);
+        };
+    }
+
     pub fn step(&mut self) -> Result<(), RuntimeError> {
         let instruction = self.current_instruction();
         let opcode = instruction.opcode();
@@ -478,7 +524,7 @@ impl State {
             OpCode::Array => self.push_array(instruction.operand() as usize)?,
             OpCode::Operation => self.binary_operation(instruction.operand() as usize)?,
             OpCode::Not => {
-                let value = Object::Boolean(self.pop().unwrap().to_bool());
+                let value = Object::Boolean(!self.pop().unwrap().to_bool());
                 self.push(value);
             },
             OpCode::Negative => {
@@ -492,6 +538,8 @@ impl State {
                     self.current_frame_as_mut().program_counter = instruction.operand() as usize;
                 };
             },
+            OpCode::ForNext => { self.for_next(instruction.operand() as usize); },
+            OpCode::Iterate => { self.iterate(instruction.operand() as usize); },
             _ => {
                 // not implemented
             }

@@ -288,9 +288,11 @@ fn get_keyword(keyword: &str) -> Option<TokenValue> {
         "this"          => TokenValue::This,
         "if"            => TokenValue::If,
         "else"          => TokenValue::Else,
+        "elseif"        => TokenValue::ElseIf,
         "while"         => TokenValue::While,
         "for"           => TokenValue::For,
-        "in"            => TokenValue::In
+        "in"            => TokenValue::In,
+        "break"         => TokenValue::Break
     }
 }
 

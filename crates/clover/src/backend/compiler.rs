@@ -5,20 +5,24 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression, IndexGetExpression};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression, IndexGetExpression, ForStatement};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
 use std::ops::Deref;
-use crate::runtime::opcode::OpCode::PushNull;
+use crate::runtime::opcode::OpCode::{PushNull, JumpIf, Jump};
 
 #[derive(Debug)]
 pub struct CompilerContext {
     pub models: Vec<Model>,
     pub functions: Vec<Function>,
     pub constants: Vec<Object>,
+
+    pub integer_constants_indices: HashMap<i64, usize>,
+    pub string_constants_indices: HashMap<String, usize>,
+
     pub global_dependencies: HashSet<usize>,
 
     pub local_count: usize,
@@ -37,6 +41,10 @@ impl CompilerContext {
             models: Vec::new(),
             functions: Vec::new(),
             constants: Vec::new(),
+
+            integer_constants_indices: HashMap::new(),
+            string_constants_indices: HashMap::new(),
+
             global_dependencies: HashSet::new(),
 
             local_count: 0,
@@ -50,11 +58,34 @@ impl CompilerContext {
         }
     }
 
-    pub fn add_constant(&mut self, object: Object) -> usize {
-        // TODO : check duplicate object
+    fn add_constant_no_check(&mut self, object: Object) -> usize {
         let index = self.constants.len();
         self.constants.push(object);
         index
+    }
+
+    pub fn add_constant(&mut self, object: Object) -> usize {
+        match &object {
+            Object::Integer(value) => {
+                if let Some(index) = self.integer_constants_indices.get(value) {
+                    *index
+                } else {
+                    let index = self.add_constant_no_check(object.clone());
+                    self.integer_constants_indices.insert(*value, index);
+                    index
+                }
+            },
+            Object::String(value) => {
+                if let Some(index) = self.string_constants_indices.get(value) {
+                    *index
+                } else {
+                    let index = self.add_constant_no_check(object.clone());
+                    self.string_constants_indices.insert(value.to_string(), index);
+                    index
+                }
+            },
+            _ => self.add_constant_no_check(object)
+        }
     }
 
     pub fn get_local_value(&self, local_index: usize) -> Option<Object> {
@@ -274,6 +305,11 @@ impl CompilerState {
             self.compile_expression(context, function_state, infix_expression.left.deref());
             self.compile_expression(context, function_state, infix_expression.right.deref());
             function_state.emit(instruction, infix_expression.infix.position);
+
+            if let TokenValue::NotEqual = infix_expression.infix.value {
+                function_state.emit_opcode(OpCode::Not, infix_expression.infix.position);
+            };
+
         } else {
             self.errors.push_error(&infix_expression.infix, "unknown operation");
         }
@@ -335,9 +371,11 @@ impl CompilerState {
         let true_part_instruction_index = function_state.emit_opcode_without_position(OpCode::JumpIf);
 
         if let Some(statements) = if_expression.false_part.as_ref() {
+            function_state.enter_scope();
             for statement in statements {
                 self.compile_statement(context, function_state, statement);
             }
+            function_state.exit_scope();
 
             function_state.remove_pop_or_push_null();
         } else {
@@ -346,15 +384,17 @@ impl CompilerState {
 
         let jump_to_end_instruction_index = function_state.emit_opcode_without_position(OpCode::Jump);
 
-        function_state.instructions[true_part_instruction_index] = OpCode::JumpIf.to_instruction(function_state.get_next_instruction_index() as u64);
+        function_state.replace_instruction(true_part_instruction_index, OpCode::JumpIf.to_instruction(function_state.get_next_instruction_index() as u64));
 
+        function_state.enter_scope();
         for statement in &if_expression.true_part {
             self.compile_statement(context, function_state, statement);
         }
+        function_state.exit_scope();
 
         function_state.remove_pop_or_push_null();
 
-        function_state.instructions[jump_to_end_instruction_index] = OpCode::Jump.to_instruction(function_state.get_next_instruction_index() as u64);
+        function_state.replace_instruction(jump_to_end_instruction_index,  OpCode::Jump.to_instruction(function_state.get_next_instruction_index() as u64));
 
     }
 
@@ -378,6 +418,52 @@ impl CompilerState {
         }
     }
 
+    fn compile_for_statement(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, for_statement: &ForStatement) {
+        let enumerable_local_index = function_state.define_anonymous_local();
+        let iterator_local_index = function_state.define_anonymous_local();
+
+        function_state.enter_scope();
+        function_state.enter_break_scope();
+
+        // prepare the enumerable object to local
+        self.compile_expression(context, function_state, &for_statement.enumerable);
+        function_state.emit(OpCode::LocalSet.to_instruction(enumerable_local_index as u64), function_state.get_last_position());
+        function_state.emit_opcode_without_position(OpCode::Pop);
+
+        // prepare the iterator to local
+        function_state.emit(OpCode::PushConstant.to_instruction(context.add_constant(Object::Integer(0)) as u64), function_state.get_last_position());
+        function_state.emit(OpCode::LocalSet.to_instruction(iterator_local_index as u64), function_state.get_last_position());
+        function_state.emit_opcode_without_position(OpCode::Pop);
+
+        // because we just enter a new scope, so we never have a duplicate name here, so can unwrap directly
+        let local_variable_index = function_state.define_local(&for_statement.identifier.value.to_string()).unwrap();
+
+        let start_loop_position = function_state.get_next_instruction_index();
+
+        function_state.emit(OpCode::ForNext.to_instruction(enumerable_local_index as u64), function_state.get_last_position());
+
+        let jump_to_end_if_true_instruction_index = function_state.get_next_instruction_index();
+        function_state.emit_opcode_without_position(OpCode::JumpIf);
+
+        // set the iterator to local
+        function_state.emit(OpCode::LocalSet.to_instruction(local_variable_index as u64), for_statement.identifier.position);
+        function_state.emit_opcode_without_position(OpCode::Pop);
+
+        for statement in &for_statement.statements {
+            self.compile_statement(context, function_state, statement);
+        };
+        function_state.emit(OpCode::Iterate.to_instruction(iterator_local_index as u64), function_state.get_last_position());
+        function_state.emit(OpCode::Jump.to_instruction(start_loop_position as u64), function_state.get_last_position());
+
+        let end_position = function_state.get_next_instruction_index();
+
+        function_state.replace_instruction(jump_to_end_if_true_instruction_index, OpCode::JumpIf.to_instruction(end_position as u64));
+
+        function_state.exit_break_scrope();
+        function_state.exit_scope();
+
+    }
+
     fn compile_statement(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, statement: &Statement) {
         match statement {
             Statement::Return(return_statement) => function_state.emit_return(return_statement.token.position),
@@ -396,7 +482,9 @@ impl CompilerState {
                         self.errors.push_error(token, "variable already exists");
                     };
                 }
-            }
+            },
+            Statement::For(for_statement) => self.compile_for_statement(context, function_state, for_statement),
+            Statement::Break(break_statement) => function_state.emit_break(break_statement.token.position)
         }
     }
 
@@ -666,13 +754,13 @@ fn get_operation_instruction_by_token(token: &Token) -> Option<Instruction> {
         TokenValue::Star | TokenValue::StarAssign => 2,
         TokenValue::Slash | TokenValue::SlashAssign => 3,
         TokenValue::Percent | TokenValue::PercentAssign => 4,
-        TokenValue::Equal => 5,
+        TokenValue::Equal | TokenValue::NotEqual => 5,
         TokenValue::Greater => 6,
         TokenValue::Less => 7,
+        TokenValue::GreaterEqual => 8,
+        TokenValue::LessEqual => 9,
 
-        TokenValue::NotEqual => 256 | 5,
-        TokenValue::GreaterEqual => 256 | 6,
-        TokenValue::LessEqual => 256 | 7,
+
         _ => return None
     };
 

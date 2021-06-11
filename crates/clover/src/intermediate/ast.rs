@@ -156,6 +156,8 @@ pub struct IncludeDefinition {
 pub enum Statement {
     Local(LocalStatement),
     Return(ReturnStatement),
+    For(ForStatement),
+    Break(BreakStatement),
     Expression(Expression)
 }
 
@@ -168,6 +170,19 @@ pub struct LocalStatement {
 #[derive(Clone, Debug)]
 pub struct ReturnStatement {
     pub token: Token
+}
+
+#[derive(Clone, Debug)]
+pub struct BreakStatement {
+    pub token: Token
+}
+
+#[derive(Clone, Debug)]
+pub struct ForStatement {
+    pub token: Token,
+    pub identifier: Token,
+    pub enumerable: Expression,
+    pub statements: Vec<Statement>
 }
 
 #[derive(Clone, Debug)]
