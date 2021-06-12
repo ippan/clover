@@ -1,16 +1,23 @@
 # Clover
 
+| clover | clover-std | clover-cli |
+| ----------- | ------- | ----------- |
+| [![crates.io](https://img.shields.io/crates/v/clover.svg)](https://crates.io/crates/clover) | | |
+
+[![CI](https://github.com/ippan/clover/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/ippan/clover/actions/workflows/build_and_test.yml)
+![Crates.io](https://img.shields.io/crates/l/clover)
+
 a scripting language created in Rust
 
 still in development~
 
-### features
+## Features
 * bytecode
 * first class function
 
 ## Example
 
-```lua,ruby
+```ruby
 include Vector2D as Vector from "./vector"
 
 public model Rect
@@ -39,6 +46,20 @@ function main()
 end
 ```
 
-## Usage
+## Integrate to your project
 
-    clover examples/main.luck
+```rust
+let result = create_state_by_filename("example/main.luck");
+
+match result {
+  Ok(mut state) => {
+    state.execute();
+  }
+}
+```
+
+## CLI
+
+```sh
+clover examples/main.luck
+```
