@@ -3,6 +3,18 @@ use std::fmt;
 #[derive(Copy, Clone)]
 pub struct Instruction(u64);
 
+pub const OPERATION_ADD: usize = 0;
+pub const OPERATION_SUB: usize = 1;
+pub const OPERATION_MULTIPLY: usize = 2;
+pub const OPERATION_DIVIDE: usize = 3;
+pub const OPERATION_MOD: usize = 4;
+pub const OPERATION_EQUAL: usize = 5;
+pub const OPERATION_GREATER: usize = 6;
+pub const OPERATION_LESS: usize = 7;
+pub const OPERATION_GREATER_EQUAL: usize = 8;
+pub const OPERATION_LESS_EQUAL: usize = 9;
+pub const OPERATION_AND: usize = 256 | 1;
+pub const OPERATION_OR: usize = 256 | 2;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OpCode {

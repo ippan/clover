@@ -12,6 +12,7 @@ use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
 use std::ops::Deref;
+use crate::runtime::opcode::{OPERATION_ADD, OPERATION_SUB, OPERATION_MULTIPLY, OPERATION_DIVIDE, OPERATION_MOD, OPERATION_EQUAL, OPERATION_GREATER, OPERATION_LESS, OPERATION_GREATER_EQUAL, OPERATION_LESS_EQUAL, OPERATION_AND, OPERATION_OR};
 
 #[derive(Debug)]
 pub struct CompilerContext {
@@ -746,23 +747,23 @@ pub fn compile(source: &str, filename: &str) -> Result<Program, CompileErrorList
 
 // helpers
 fn get_operation_instruction_by_token(token: &Token) -> Option<Instruction> {
-    let operand: u64 = match token.value {
-        TokenValue::Plus | TokenValue::PlusAssign => 0,
-        TokenValue::Minus | TokenValue::MinusAssign => 1,
-        TokenValue::Star | TokenValue::StarAssign => 2,
-        TokenValue::Slash | TokenValue::SlashAssign => 3,
-        TokenValue::Percent | TokenValue::PercentAssign => 4,
-        TokenValue::Equal | TokenValue::NotEqual => 5,
-        TokenValue::Greater => 6,
-        TokenValue::Less => 7,
-        TokenValue::GreaterEqual => 8,
-        TokenValue::LessEqual => 9,
+    let operand: usize = match token.value {
+        TokenValue::Plus | TokenValue::PlusAssign => OPERATION_ADD,
+        TokenValue::Minus | TokenValue::MinusAssign => OPERATION_SUB,
+        TokenValue::Star | TokenValue::StarAssign => OPERATION_MULTIPLY,
+        TokenValue::Slash | TokenValue::SlashAssign => OPERATION_DIVIDE,
+        TokenValue::Percent | TokenValue::PercentAssign => OPERATION_MOD,
+        TokenValue::Equal | TokenValue::NotEqual => OPERATION_EQUAL,
+        TokenValue::Greater => OPERATION_GREATER,
+        TokenValue::Less => OPERATION_LESS,
+        TokenValue::GreaterEqual => OPERATION_GREATER_EQUAL,
+        TokenValue::LessEqual => OPERATION_LESS_EQUAL,
 
-        TokenValue::And => 256 | 1,
-        TokenValue::Or => 256 | 2,
+        TokenValue::And => OPERATION_AND,
+        TokenValue::Or => OPERATION_OR,
 
         _ => return None
     };
 
-    Some(OpCode::Operation.to_instruction(operand))
+    Some(OpCode::Operation.to_instruction(operand as u64))
 }

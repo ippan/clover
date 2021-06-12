@@ -1,10 +1,9 @@
 use crate::runtime::object::{Object, Reference, ModelInstance};
 use crate::runtime::program::RuntimeError;
 use crate::runtime::state::State;
+use crate::runtime::opcode::OPERATION_EQUAL;
 
 const META_METHODS: &[ &str ] = &[ "_add", "_sub", "_mul", "_div", "_mod", "_eq", "_gt", "_lt", "_gte", "_lte" ];
-
-
 
 fn integer_add(state: &State, left: i64, right: &Object) -> Result<Object, RuntimeError> {
     match right {
@@ -273,6 +272,15 @@ pub fn binary_operation(state: &mut State, left: &Object, right: &Object, operan
         Object::Integer(value) => integer_operation(state, *value, right, operand)?,
         Object::Float(value) => float_operation(state, *value, right, operand)?,
         Object::String(value) => string_operation(state, value, right, operand)?,
+
+        Object::Null => {
+            if operand == OPERATION_EQUAL {
+                state.push(Object::Boolean(right.is_null()));
+                return Ok(());
+            } else {
+                return Err(RuntimeError::new("null can not do this kind of operation", state.last_position()));
+            };
+        }
 
         _ => { return Err(RuntimeError::new("unknown object", state.last_position())); }
     });

@@ -5,16 +5,8 @@ use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::Deref;
 use crate::runtime::operation::{binary_operation, negative_operation};
-
-macro_rules! ensure_type {
-    ($object: expr, $object_pattern: pat, $message: expr, $position: expr) => {
-        if let $object_pattern = $object {
-            Ok(())
-        } else {
-            Err(RuntimeError::new($message, $position))
-        }
-    }
-}
+use crate::runtime::object_property::{instance_get_array, instance_get_integer, instance_get_float, instance_get_string};
+use crate::runtime::iterator::{for_next, iterate};
 
 pub struct Frame {
     pub locals: Vec<Object>,
@@ -164,11 +156,11 @@ impl State {
         function.instructions[program_counter]
     }
 
-    fn current_frame_as_mut(&mut self) -> &mut Frame {
+    pub fn current_frame_as_mut(&mut self) -> &mut Frame {
         self.frames.back_mut().unwrap()
     }
 
-    fn current_frame(&self) -> &Frame {
+    pub fn current_frame(&self) -> &Frame {
         self.frames.back().unwrap()
     }
 
@@ -218,35 +210,16 @@ impl State {
         Position::none()
     }
 
-    // instance get for model
-    fn instance_get_model(&mut self, model_index: usize, index: &Object) -> Result<(), RuntimeError> {
-        self.index_get_model(model_index, index)
-    }
-
-    fn instance_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: &Object) -> Result<(), RuntimeError> {
-        self.index_get_model_instance(model_instance, index)
-    }
-
-    fn instance_get_array(&mut self, array: Reference<Vec<Object>>, index: &Object) -> Result<(), RuntimeError> {
-        self.index_get_array(array, index)
-    }
-
-    fn instance_get_native_model(&mut self, model_index: usize, index: &Object) -> Result<(), RuntimeError> {
-        if let Object::String(key) = &index {
-            let model = self.native_models.get(model_index).unwrap();
-
-            let result = model.borrow().model_get(index)?;
-
-            self.push(result);
-        } else {
-            self.push(Object::Null);
-        };
+    fn instance_get_native_model(&mut self, model_index: usize, key: &str) -> Result<(), RuntimeError> {
+        let model = self.native_models.get(model_index).unwrap();
+        let result = model.borrow().model_get(key)?;
+        self.push(result);
 
         Ok(())
     }
 
-    fn instance_get_native_instance(&mut self, instance: Reference<dyn NativeModelInstance>, index: &Object) -> Result<(), RuntimeError> {
-        let result = instance.borrow().instance_get(index)?;
+    fn instance_get_native_instance(&mut self, instance: Reference<dyn NativeModelInstance>, key: &str) -> Result<(), RuntimeError> {
+        let result = instance.borrow().instance_get(key)?;
 
         self.push(State::process_native_instance_result(instance, result));
 
@@ -258,12 +231,17 @@ impl State {
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Model(model_index) => self.instance_get_model(model_index, &index)?,
-            Object::Instance(model_instance) => self.instance_get_model_instance(model_instance, &index)?,
-            Object::NativeModel(model_index) => self.instance_get_native_model(model_index, &index)?,
-            Object::NativeInstance(instance) => self.instance_get_native_instance(instance, &index)?,
 
-            Object::Array(array) => self.instance_get_array(array, &index)?,
+            Object::Model(model_index) => self.index_get_model(model_index, &index)?,
+            Object::Instance(model_instance) => self.index_get_model_instance(model_instance, &index)?,
+            Object::NativeModel(model_index) => self.instance_get_native_model(model_index, index.as_str())?,
+            Object::NativeInstance(instance) => self.instance_get_native_instance(instance, index.as_str())?,
+
+            Object::Integer(value) => instance_get_integer(self, value, index.as_str())?,
+            Object::Float(value) => instance_get_float(self, value, index.as_str())?,
+            Object::String(value) => instance_get_string(self, value, index.as_str())?,
+
+            Object::Array(array) => instance_get_array(self, array, index.as_str())?,
             _ => {
                 return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
             }
@@ -353,25 +331,13 @@ impl State {
         Ok(())
     }
 
-    fn instance_set_model_instance_by_index(&mut self, model_instance: Reference<ModelInstance>, index: usize) -> Result<(), RuntimeError> {
-        self.index_set_model_instance_by_index(model_instance, index)
-    }
-
-    fn instance_set_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
-        self.index_set_model_instance(model_instance, index)
-    }
-
-    fn instance_set_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
-        self.index_set_array(array, index)
-    }
-
     fn instance_set(&mut self) -> Result<(), RuntimeError> {
         let index = self.pop().unwrap();
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Instance(model_instance) => self.instance_set_model_instance(model_instance, index)?,
-            Object::Array(array) => self.instance_set_array(array, index)?,
+            Object::Instance(model_instance) => self.index_set_model_instance(model_instance, &index)?,
+            Object::NativeInstance(instance) => instance.borrow_mut().instance_set(index.as_str(), self.top())?,
             _ => {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
             }
@@ -389,7 +355,7 @@ impl State {
         }
     }
 
-    fn index_set_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+    fn index_set_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: &Object) -> Result<(), RuntimeError> {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_instance.borrow().deref().model_index).unwrap();
 
@@ -405,14 +371,14 @@ impl State {
         Ok(())
     }
 
-    fn index_set_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+    fn index_set_array(&mut self, array: Reference<Vec<Object>>, index: &Object) -> Result<(), RuntimeError> {
         match index {
             Object::Integer(i) => {
-                if i < 0 || i >= array.borrow().deref().len() as i64 {
+                if *i < 0 || *i >= array.borrow().deref().len() as i64 {
                     return Err(RuntimeError::new("index out of range", self.last_position()));
                 };
 
-                array.borrow_mut()[i as usize] = self.top();
+                array.borrow_mut()[*i as usize] = self.top();
             },
             _ => {
                 return Err(RuntimeError::new("can not get array with object index", self.last_position()));
@@ -427,8 +393,9 @@ impl State {
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Instance(model_instance) => self.index_set_model_instance(model_instance, index)?,
-            Object::Array(array) => self.index_set_array(array, index)?,
+            Object::Instance(model_instance) => self.index_set_model_instance(model_instance, &index)?,
+            Object::NativeInstance(instance) => instance.borrow_mut().index_set(&index, self.top())?,
+            Object::Array(array) => self.index_set_array(array, &index)?,
             _ => {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
             }
@@ -458,52 +425,6 @@ impl State {
         binary_operation(self, &left, &right, operand)?;
 
         Ok(())
-    }
-
-    fn for_next(&mut self, enumerable_index: usize) -> Result<(), RuntimeError> {
-        let iterator_index = enumerable_index + 1;
-
-        let enumerable = self.current_frame().locals[enumerable_index].clone();
-
-        let iterator = if let Object::Integer(iterator) = self.current_frame().locals[iterator_index].clone() {
-            iterator
-        } else {
-            0
-        };
-
-        let jump = match enumerable {
-            Object::Integer(value) => {
-                if iterator < value {
-                    self.push(Object::Integer(iterator));
-                    false
-                } else {
-                    // iterator greater than enumerable object, finish loop
-                    true
-                }
-            },
-            Object::Array(array) => {
-                let index = iterator as usize;
-
-                if index < array.borrow().len() {
-                    self.push(array.borrow()[index].clone());
-                    false
-                } else {
-                    // iterator greater than enumerable array len, finish loop
-                    true
-                }
-            },
-            _ => true
-        };
-
-        self.push(Object::Boolean(jump));
-
-        Ok(())
-    }
-
-    fn iterate(&mut self, iterator_index: usize) {
-        if let Object::Integer(iterator) = self.current_frame().locals[iterator_index].clone() {
-            self.current_frame_as_mut().locals[iterator_index] = Object::Integer(iterator + 1);
-        };
     }
 
     pub fn step(&mut self) -> Result<(), RuntimeError> {
@@ -576,8 +497,8 @@ impl State {
                     self.current_frame_as_mut().program_counter = instruction.operand() as usize;
                 };
             },
-            OpCode::ForNext => { self.for_next(instruction.operand() as usize)?; },
-            OpCode::Iterate => { self.iterate(instruction.operand() as usize); },
+            OpCode::ForNext => { for_next(self, instruction.operand() as usize)?; },
+            OpCode::Iterate => { iterate(self, instruction.operand() as usize); },
             _ => {
                 // not implemented
             }

@@ -8,16 +8,14 @@ use rand::Rng;
 pub struct Random;
 
 impl NativeModel for Random {
-    fn model_get(&self, index: &Object) -> Result<Object, RuntimeError> {
-        if let Object::String(key) = index {
-            if key == "new" {
-                return Ok(Object::NativeFunction(Random::new_random));
-            };
-        };
-
-        Ok(Object::Null)
+    fn model_get(&self, key: &str) -> Result<Object, RuntimeError> {
+        match key {
+            "new" => Ok(Object::NativeFunction(Random::new_random)),
+            _ => Ok(Object::Null)
+        }
     }
 }
+
 impl Random {
     pub fn new_random(_state: &mut State, _parameters: &[ Object ]) -> Result<Object, RuntimeError> {
         let random_instance = RandomInstance {
@@ -41,23 +39,19 @@ impl NativeModelInstance for RandomInstance {
         Ok(())
     }
 
-    fn instance_get(&self, index: &Object) -> Result<Object, RuntimeError> {
-        if let Object::String(key) = index {
-            return match key.as_str() {
-                "next_integer" | "next_float" | "within" | "pick" => Ok(Object::EmptyInstanceNativeFunction(key.to_string())),
-                _ => Err(RuntimeError::new("index does not exists", Position::none()))
-            };
-        };
-
-        Err(RuntimeError::new("index does not exists", Position::none()))
+    fn instance_get(&self, key: &str) -> Result<Object, RuntimeError> {
+        match key {
+            "next_integer" | "next_float" | "within" | "pick" => Ok(Object::EmptyInstanceNativeFunction(key.to_string())),
+            _ => Err(RuntimeError::new("index does not exists", Position::none()))
+        }
     }
 
-    fn instance_set(&mut self, _index: &Object, _value: Object) -> Result<(), RuntimeError> {
+    fn instance_set(&mut self, _key: &str, _value: Object) -> Result<(), RuntimeError> {
         Ok(())
     }
 
-    fn call(&mut self, state: &mut State, id: &str, parameters: &[Object]) -> Result<Object, RuntimeError> {
-        match id {
+    fn call(&mut self, state: &mut State, key: &str, parameters: &[Object]) -> Result<Object, RuntimeError> {
+        match key {
             "next_integer" => self.next_integer(state, parameters),
             "next_float" => self.next_float(state, parameters),
             "within" => self.within(state, parameters),

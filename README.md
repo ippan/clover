@@ -1,6 +1,6 @@
 # Clover
 
-a toy language created in Rust
+a scripting language created in Rust
 
 still in development~
 
@@ -10,34 +10,35 @@ still in development~
 
 ## Example
 
-    include Vector2D as Vector from "./vector"
+```lua,ruby
+include Vector2D as Vector from "./vector"
 
-    public model Rect
-      start
-      size
-    end
+public model Rect
+  start
+  size
+end
 
-    implement Rect
-      function new()
-        local rect = Rect()
-        rect.start = Vector.new()
-        rect.size = Vector.new()
-        rect
-      end
-    end
+implement Rect
+  function new()
+    local rect = Rect()
+    rect.start = Vector.new()
+    rect.size = Vector.new()
+    rect
+  end
+end
 
-    model MyRect
-    end
+model MyRect
+end
 
-    # copy all function in Rect to MyRect
-    apply Rect to MyRect
+# copy all function in Rect to MyRect
+apply Rect to MyRect
 
-    function main()
-      local rect = MyRect.new()
-      rect
-    end
-
+function main()
+  local rect = MyRect.new()
+  rect
+end
+```
 
 ## Usage
 
-    CloverCli ./examples/main.luck
+    clover examples/main.luck

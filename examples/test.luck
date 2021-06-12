@@ -32,8 +32,12 @@ end
 function main()
     local array = [ "test", "Hello", "Ok" ]
 
+    print(array.length)
+
     local random = Random.new()
     for i in 10
         print(random.pick(array))
     end
+
+    1.string
 end

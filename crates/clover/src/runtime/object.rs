@@ -22,16 +22,16 @@ pub struct ModelInstance {
 
 pub trait NativeModel {
     // direct call to model
-    fn model_get(&self, index: &Object) -> Result<Object, RuntimeError>;
+    fn model_get(&self, key: &str) -> Result<Object, RuntimeError>;
 }
 
 pub trait NativeModelInstance {
     fn index_get(&self, index: &Object) -> Result<Object, RuntimeError>;
     fn index_set(&mut self, index: &Object, value: Object) -> Result<(), RuntimeError>;
-    fn instance_get(&self, index: &Object) -> Result<Object, RuntimeError>;
-    fn instance_set(&mut self, index: &Object, value: Object) -> Result<(), RuntimeError>;
+    fn instance_get(&self, key: &str) -> Result<Object, RuntimeError>;
+    fn instance_set(&mut self, key: &str, value: Object) -> Result<(), RuntimeError>;
 
-    fn call(&mut self, state: &mut State, id: &str, parameters: &[Object]) ->Result<Object, RuntimeError>;
+    fn call(&mut self, state: &mut State, key: &str, parameters: &[Object]) ->Result<Object, RuntimeError>;
 }
 
 pub enum Object {
@@ -110,6 +110,16 @@ impl Object {
             _ => true
         }
     }
+
+    pub fn as_str(&self) -> &str {
+        if let Object::String(value) = self {
+            value.as_str()
+        } else {
+            ""
+        }
+    }
+
+    pub fn is_null(&self) -> bool { matches!(self, Object::Null) }
 }
 
 impl ToString for Object {
