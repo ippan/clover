@@ -1,0 +1,14 @@
+[package]
+name = "clover-std"
+version = "0.0.2"
+authors = [ "PanPan <ippan829@gmail.com>" ]
+license = "MIT"
+edition = "2018"
+repository = "https://github.com/ippan/clover"
+keywords = [ "language", "scripting" ]
+readme = "README.md"
+description = "A scripting language."
+
+[dependencies]
+clover = { path = "../clover", version = "0.0.2" }
+rand = "0.8.3"

@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/clover",
+    "crates/clover-std",
+    "crates/clover-cli"
+]

@@ -1,41 +1,44 @@
 # Clover
 
-a toy object-oriented language created in C#~
+a scripting language created in Rust
 
 still in development~
 
-#### C# version is under development, some feature have not implemented. If you want to find the CoffeeScript version, go to https://github.com/ippan/clover/tree/coffee
-
 ### features
 * bytecode
-* classes & inheritance
 * first class function
-* closure 
 
 ## Example
 
-    sum = function(a, b)
-      a + b
-    end
+```lua,ruby
+include Vector2D as Vector from "./vector"
 
-    c = sum(1, 2)
+public model Rect
+  start
+  size
+end
 
-    MyBaseClass = class 
-      hello = 'hello'
+implement Rect
+  function new()
+    local rect = Rect()
+    rect.start = Vector.new()
+    rect.size = Vector.new()
+    rect
+  end
+end
 
-      say = function()
-        hello
-      end
-    end
+model MyRect
+end
 
-    MyClass = class extends MyBaseClass
+# copy all function in Rect to MyRect
+apply Rect to MyRect
 
-      say = function()
-        base.say() + base.say()
-      end
-
-    end
+function main()
+  local rect = MyRect.new()
+  rect
+end
+```
 
 ## Usage
 
-    CloverCli ./examples/main.luck
+    clover examples/main.luck
