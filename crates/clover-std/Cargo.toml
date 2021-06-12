@@ -11,3 +11,4 @@ description = "A scripting language."
 
 [dependencies]
 clover = { path = "../clover" }
+rand = "0.8.3"

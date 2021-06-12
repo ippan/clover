@@ -405,7 +405,7 @@ impl CompilerState {
             Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
             Expression::Null(null_expression) => { function_state.emit_opcode(OpCode::PushNull, null_expression.token.position); },
             Expression::Array(array_expression) => self.compile_array_expression(context, function_state, array_expression),
-            Expression::Identifier(identifier_expresision) => self.compile_identifier_expression(context, function_state, identifier_expresision),
+            Expression::Identifier(identifier_expression) => self.compile_identifier_expression(context, function_state, identifier_expression),
             Expression::Prefix(prefix_expression) => self.compile_prefix_expression(context, function_state, prefix_expression),
             Expression::Infix(infix_expression) => self.compile_infix_expression(context, function_state, infix_expression),
             Expression::Call(call_expression) => self.compile_call_expression(context, function_state, call_expression),

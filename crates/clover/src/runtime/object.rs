@@ -21,15 +21,17 @@ pub struct ModelInstance {
 }
 
 pub trait NativeModel {
-    // register all native function in this function
-    fn register(&mut self, state: &mut State);
     // direct call to model
-    fn model_get(&self, index: Object) -> Result<Object, RuntimeError>;
+    fn model_get(&self, index: &Object) -> Result<Object, RuntimeError>;
 }
 
 pub trait NativeModelInstance {
-    fn instance_get(&self, index: Object) -> Result<Object, RuntimeError>;
-    fn instance_set(&mut self, index: Object, value: Object) -> Result<(), RuntimeError>;
+    fn index_get(&self, index: &Object) -> Result<Object, RuntimeError>;
+    fn index_set(&mut self, index: &Object, value: Object) -> Result<(), RuntimeError>;
+    fn instance_get(&self, index: &Object) -> Result<Object, RuntimeError>;
+    fn instance_set(&mut self, index: &Object, value: Object) -> Result<(), RuntimeError>;
+
+    fn call(&mut self, state: &mut State, id: &str, parameters: &[Object]) ->Result<Object, RuntimeError>;
 }
 
 pub enum Object {
@@ -42,7 +44,8 @@ pub enum Object {
     Function(usize),
     InstanceFunction(Box<Object>, usize),
     NativeFunction(NativeFunction),
-    InstanceNativeFunction(Box<Object>, NativeFunction),
+    InstanceNativeFunction(Reference<dyn NativeModelInstance>, String),
+    EmptyInstanceNativeFunction(String),
 
     Model(usize),
     NativeModel(usize),
@@ -84,9 +87,10 @@ impl Clone for Object {
             Object::Function(index) => Object::Function(*index),
             Object::InstanceFunction(this, index) => Object::InstanceFunction(this.clone(), *index),
             Object::NativeFunction(function) => Object::NativeFunction(*function),
-            Object::InstanceNativeFunction(this, function) => Object::InstanceNativeFunction(this.clone(), *function),
+            Object::InstanceNativeFunction(this, function_name) => Object::InstanceNativeFunction(this.clone(), function_name.clone()),
+            Object::EmptyInstanceNativeFunction(function_name) => Object::EmptyInstanceNativeFunction(function_name.clone()),
             Object::Model(index) => Object::Model(*index),
-            Object::NativeModel(index) => Object::Model(*index),
+            Object::NativeModel(index) => Object::NativeModel(*index),
             Object::Instance(instance) => Object::Instance(instance.clone()),
             Object::NativeInstance(instance) => Object::NativeInstance(instance.clone()),
             Object::Array(value) => Object::Array(value.clone())

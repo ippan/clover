@@ -1,6 +1,6 @@
 use crate::runtime::program::{Program, RuntimeError};
 use std::collections::{HashMap, LinkedList};
-use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, NativeModel, NativeFunction};
+use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, NativeModel, NativeFunction, NativeModelInstance};
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::Deref;
@@ -115,12 +115,27 @@ impl State {
             Ok(())
     }
 
+    fn call_instance_native_function(&mut self, instance: Reference<dyn NativeModelInstance>, function_name: &str, parameters: &[ Object ]) -> Result<(), RuntimeError> {
+        let result = instance.borrow_mut().call(self, function_name, parameters)?;
+
+        self.push(State::process_native_instance_result(instance, result));
+
+        Ok(())
+    }
+
+    fn process_native_instance_result(instance: Reference<dyn NativeModelInstance>, result: Object) -> Object {
+        match &result {
+            Object::EmptyInstanceNativeFunction(function_name) => Object::InstanceNativeFunction(instance, function_name.clone()),
+            _ => result
+        }
+    }
+
     fn call_object(&mut self, object: Object, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         match object {
             Object::Function(function_index) => self.call_function_by_index(function_index, parameters),
             Object::InstanceFunction(model, function_index) => self.call_function_by_index(function_index,&make_instance_call_parameters(model.deref().clone(), parameters)),
             Object::NativeFunction(function) => self.call_native_function(function, parameters),
-            Object::InstanceNativeFunction(model, function) => self.call_native_function(function, &make_instance_call_parameters(model.deref().clone(), parameters)),
+            Object::InstanceNativeFunction(instance, function_name) => self.call_instance_native_function(instance, &function_name, parameters),
             Object::Model(model_index) => self.call_model_by_index(model_index, parameters),
             _ => Err(RuntimeError::new(&format!("can not call {:?}", object), self.last_position()))
         }
@@ -204,16 +219,38 @@ impl State {
     }
 
     // instance get for model
-    fn instance_get_model(&mut self, model_index: usize, index: Object) -> Result<(), RuntimeError> {
+    fn instance_get_model(&mut self, model_index: usize, index: &Object) -> Result<(), RuntimeError> {
         self.index_get_model(model_index, index)
     }
 
-    fn instance_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+    fn instance_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: &Object) -> Result<(), RuntimeError> {
         self.index_get_model_instance(model_instance, index)
     }
 
-    fn instance_get_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+    fn instance_get_array(&mut self, array: Reference<Vec<Object>>, index: &Object) -> Result<(), RuntimeError> {
         self.index_get_array(array, index)
+    }
+
+    fn instance_get_native_model(&mut self, model_index: usize, index: &Object) -> Result<(), RuntimeError> {
+        if let Object::String(key) = &index {
+            let model = self.native_models.get(model_index).unwrap();
+
+            let result = model.borrow().model_get(index)?;
+
+            self.push(result);
+        } else {
+            self.push(Object::Null);
+        };
+
+        Ok(())
+    }
+
+    fn instance_get_native_instance(&mut self, instance: Reference<dyn NativeModelInstance>, index: &Object) -> Result<(), RuntimeError> {
+        let result = instance.borrow().instance_get(index)?;
+
+        self.push(State::process_native_instance_result(instance, result));
+
+        Ok(())
     }
 
     fn instance_get(&mut self) -> Result<(), RuntimeError> {
@@ -221,9 +258,12 @@ impl State {
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Model(model_index) => self.instance_get_model(model_index, index)?,
-            Object::Instance(model_instance) => self.instance_get_model_instance(model_instance, index)?,
-            Object::Array(array) => self.instance_get_array(array, index)?,
+            Object::Model(model_index) => self.instance_get_model(model_index, &index)?,
+            Object::Instance(model_instance) => self.instance_get_model_instance(model_instance, &index)?,
+            Object::NativeModel(model_index) => self.instance_get_native_model(model_index, &index)?,
+            Object::NativeInstance(instance) => self.instance_get_native_instance(instance, &index)?,
+
+            Object::Array(array) => self.instance_get_array(array, &index)?,
             _ => {
                 return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
             }
@@ -233,7 +273,7 @@ impl State {
     }
 
     // index get for model
-    fn index_get_model(&mut self, model_index: usize, index: Object) -> Result<(), RuntimeError> {
+    fn index_get_model(&mut self, model_index: usize, index: &Object) -> Result<(), RuntimeError> {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_index).unwrap();
 
@@ -247,7 +287,7 @@ impl State {
         Ok(())
     }
 
-    fn index_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: Object) -> Result<(), RuntimeError> {
+    fn index_get_model_instance(&mut self, model_instance: Reference<ModelInstance>, index: &Object) -> Result<(), RuntimeError> {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_instance.borrow().deref().model_index).unwrap();
 
@@ -279,14 +319,15 @@ impl State {
         Ok(())
     }
 
-    fn index_get_array(&mut self, array: Reference<Vec<Object>>, index: Object) -> Result<(), RuntimeError> {
+    fn index_get_array(&mut self, array: Reference<Vec<Object>>, index: &Object) -> Result<(), RuntimeError> {
         match index {
             Object::Integer(i) => {
-                if i < 0 || i >= array.borrow().deref().len() as i64 {
+                let array_index = *i;
+                if array_index < 0 || array_index >= array.borrow().deref().len() as i64 {
                     return Err(RuntimeError::new("index out of range", self.last_position()));
                 };
 
-                self.push(array.borrow().deref().get(i as usize).unwrap().clone());
+                self.push(array.borrow().deref().get(array_index as usize).unwrap().clone());
             },
             _ => {
                 return Err(RuntimeError::new("can not get array with object index", self.last_position()));
@@ -301,9 +342,9 @@ impl State {
         let instance = self.pop().unwrap();
 
         match instance {
-            Object::Model(model_index) => self.index_get_model(model_index, index)?,
-            Object::Instance(model_instance) => self.index_get_model_instance(model_instance, index)?,
-            Object::Array(array) => self.index_get_array(array, index)?,
+            Object::Model(model_index) => self.index_get_model(model_index, &index)?,
+            Object::Instance(model_instance) => self.index_get_model_instance(model_instance, &index)?,
+            Object::Array(array) => self.index_get_array(array, &index)?,
             _ => {
                 return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
             }
@@ -585,14 +626,11 @@ impl State {
         self.globals.insert(name.to_string(), Object::NativeFunction(function));
     }
 
-    pub fn add_native_model(&mut self, native_model: Reference<dyn NativeModel>, name: Option<&str>) -> usize {
-        native_model.borrow_mut().register(self);
+    pub fn add_native_model(&mut self, name: &str, native_model: Reference<dyn NativeModel>) -> usize {
         let index = self.native_models.len();
         self.native_models.push(native_model);
 
-        if let Some(global_name) = name {
-            self.globals.insert(global_name.to_string(), Object::NativeModel(index));
-        };
+        self.globals.insert(name.to_string(), Object::NativeModel(index));
 
         index
     }

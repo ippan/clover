@@ -30,9 +30,10 @@ implement Test
 end
 
 function main()
-    local a = Test.new()
-    local b = Test.new()
+    local array = [ "test", "Hello", "Ok" ]
 
-    print(a == b)
-
+    local random = Random.new()
+    for i in 10
+        print(random.pick(array))
+    end
 end
