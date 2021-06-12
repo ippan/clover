@@ -1,0 +1,26 @@
+
+function simple()
+    local sum = 0
+
+    # add 0 to 9
+    for i in 10
+        sum += i
+    end
+
+    sum == 45
+end
+
+function nests()
+
+    local sum = 0
+
+    # 5 times
+    for i in 5
+        # add 0 to 9
+        for j in 10
+            sum += j
+        end
+    end
+
+    sum == 225
+end

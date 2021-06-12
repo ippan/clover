@@ -4,9 +4,7 @@ use crate::runtime::object::{Object, ModelInstance, Reference, make_reference, N
 use crate::intermediate::Position;
 use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::Deref;
-use crate::runtime::operation::{binary_operation, negative_operation};
 use crate::runtime::object_property::{instance_get_array, instance_get_integer, instance_get_float, instance_get_string};
-use crate::runtime::iterator::{for_next, iterate};
 
 pub struct Frame {
     pub locals: Vec<Object>,
@@ -32,12 +30,12 @@ impl Frame {
 }
 
 pub struct State {
-    pub globals: HashMap<String, Object>,
-    pub locals: Vec<Object>,
-    pub native_models: Vec<Reference<dyn NativeModel>>,
-    pub stack: LinkedList<Object>,
-    pub frames: LinkedList<Frame>,
-    pub program: Program
+    globals: HashMap<String, Object>,
+    locals: Vec<Object>,
+    native_models: Vec<Reference<dyn NativeModel>>,
+    stack: LinkedList<Object>,
+    frames: LinkedList<Frame>,
+    program: Program
 }
 
 impl State {
@@ -62,6 +60,10 @@ impl State {
         }
     }
 
+    pub fn get_program(&self) -> &Program {
+        &self.program
+    }
+
     pub fn call_function_by_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         let function = self.program.functions.get(function_index).unwrap();
 
@@ -81,6 +83,90 @@ impl State {
         Ok(())
     }
 
+    pub fn current_frame_as_mut(&mut self) -> &mut Frame {
+        self.frames.back_mut().unwrap()
+    }
+
+    pub fn current_frame(&self) -> &Frame {
+        self.frames.back().unwrap()
+    }
+
+    pub fn pop(&mut self) -> Option<Object> {
+        self.stack.pop_back()
+    }
+
+    pub fn push(&mut self, object: Object) {
+        self.stack.push_back(object)
+    }
+
+    pub fn top(&self) -> Object {
+        self.stack.back().unwrap().clone()
+    }
+
+    pub fn last_position(&self) -> Position {
+        let program_counter = self.current_frame().program_counter;
+        if let Some(debug_info) = &self.program.debug_info {
+            if program_counter > 0 {
+                let function_index = self.current_frame().function_index;
+
+                return debug_info.functions[function_index][program_counter - 1];
+            };
+        };
+
+        Position::none()
+    }
+
+    pub fn execute_by_function_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
+        if self.program.functions.len() <= function_index {
+            return Err(RuntimeError::new("can not found function", Position::none()));
+        };
+
+        let function = self.program.functions.get(function_index).unwrap();
+
+        if parameters.len() > function.parameter_count {
+            return Err(RuntimeError::new("too many parameters", Position::none()));
+        };
+
+        self.call_function_by_index(function_index, parameters)?;
+
+        while !self.frames.is_empty() {
+            self.step()?;
+        };
+
+        if let Some(object) = self.pop() {
+            Ok(object)
+        } else {
+            Err(RuntimeError::new("there is no result", Position::none()))
+        }
+    }
+
+    pub fn execute(&mut self) -> Result<Object, RuntimeError> {
+        for &global_index in self.program.global_dependencies.iter() {
+            if let Some(Object::String(global_name)) = self.program.constants.get(global_index) {
+                if !self.globals.contains_key(global_name) {
+                    return Err(RuntimeError::new(&format!("this program need a global variable [{}] which is not found in this state", global_name), Position::none()));
+                }
+            }
+        }
+
+        self.execute_by_function_index(self.program.entry_point, &[])
+    }
+
+    pub fn add_native_function(&mut self, name: &str, function: NativeFunction)  {
+        self.globals.insert(name.to_string(), Object::NativeFunction(function));
+    }
+
+    pub fn add_native_model(&mut self, name: &str, native_model: Reference<dyn NativeModel>) -> usize {
+        let index = self.native_models.len();
+        self.native_models.push(native_model);
+
+        self.globals.insert(name.to_string(), Object::NativeModel(index));
+
+        index
+    }
+}
+
+impl State {
     fn call_model_by_index(&mut self, model_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         let model = self.program.models.get(model_index).unwrap();
         if parameters.len() > model.property_indices.len() {
@@ -156,23 +242,7 @@ impl State {
         function.instructions[program_counter]
     }
 
-    pub fn current_frame_as_mut(&mut self) -> &mut Frame {
-        self.frames.back_mut().unwrap()
-    }
-
-    pub fn current_frame(&self) -> &Frame {
-        self.frames.back().unwrap()
-    }
-
-    pub fn pop(&mut self) -> Option<Object> {
-        self.stack.pop_back()
-    }
-
-    pub fn push(&mut self, object: Object) {
-        self.stack.push_back(object)
-    }
-
-    pub fn push_frame(&mut self, frame: Frame) {
+    fn push_frame(&mut self, frame: Frame) {
         self.frames.push_back(frame);
     }
 
@@ -191,23 +261,6 @@ impl State {
         };
 
         self.push(return_value);
-    }
-
-    pub fn top(&self) -> Object {
-        self.stack.back().unwrap().clone()
-    }
-
-    pub fn last_position(&self) -> Position {
-        let program_counter = self.current_frame().program_counter;
-        if let Some(debug_info) = &self.program.debug_info {
-            if program_counter > 0 {
-                let function_index = self.current_frame().function_index;
-
-                return debug_info.functions[function_index][program_counter - 1];
-            };
-        };
-
-        Position::none()
     }
 
     fn instance_get_native_model(&mut self, model_index: usize, key: &str) -> Result<(), RuntimeError> {
@@ -422,7 +475,7 @@ impl State {
         let right = self.pop().unwrap();
         let left = self.pop().unwrap();
 
-        binary_operation(self, &left, &right, operand)?;
+        self.binary_operation_with_parameters(&left, &right, operand)?;
 
         Ok(())
     }
@@ -488,7 +541,7 @@ impl State {
             },
             OpCode::Negative => {
                 let target = self.pop().unwrap();
-                self.push(negative_operation(self, &target)?)
+                self.push(self.negative_operation(&target)?)
             },
             OpCode::Jump => { self.current_frame_as_mut().program_counter = instruction.operand() as usize; },
             OpCode::JumpIf => {
@@ -497,63 +550,14 @@ impl State {
                     self.current_frame_as_mut().program_counter = instruction.operand() as usize;
                 };
             },
-            OpCode::ForNext => { for_next(self, instruction.operand() as usize)?; },
-            OpCode::Iterate => { iterate(self, instruction.operand() as usize); },
+            OpCode::ForNext => { self.for_next(instruction.operand() as usize)?; },
+            OpCode::Iterate => { self.iterate(instruction.operand() as usize); },
             _ => {
                 // not implemented
             }
         }
 
         Ok(())
-    }
-
-    pub fn execute_by_function_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
-        if self.program.functions.len() <= function_index {
-            return Err(RuntimeError::new("can not found function", Position::none()));
-        };
-
-        let function = self.program.functions.get(function_index).unwrap();
-
-        if parameters.len() > function.parameter_count {
-            return Err(RuntimeError::new("too many parameters", Position::none()));
-        };
-
-        self.call_function_by_index(function_index, parameters)?;
-
-        while !self.frames.is_empty() {
-            self.step()?;
-        };
-
-        if let Some(object) = self.pop() {
-            Ok(object)
-        } else {
-            Err(RuntimeError::new("there is no result", Position::none()))
-        }
-    }
-
-    pub fn execute(&mut self) -> Result<Object, RuntimeError> {
-        for &global_index in self.program.global_dependencies.iter() {
-            if let Some(Object::String(global_name)) = self.program.constants.get(global_index) {
-                if !self.globals.contains_key(global_name) {
-                    return Err(RuntimeError::new(&format!("this program need a global variable [{}] which is not found in this state", global_name), Position::none()));
-                }
-            }
-        }
-
-        self.execute_by_function_index(self.program.entry_point, &[])
-    }
-
-    pub fn add_native_function(&mut self, name: &str, function: NativeFunction)  {
-        self.globals.insert(name.to_string(), Object::NativeFunction(function));
-    }
-
-    pub fn add_native_model(&mut self, name: &str, native_model: Reference<dyn NativeModel>) -> usize {
-        let index = self.native_models.len();
-        self.native_models.push(native_model);
-
-        self.globals.insert(name.to_string(), Object::NativeModel(index));
-
-        index
     }
 }
 

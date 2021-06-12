@@ -1,0 +1,17 @@
+
+function add()
+    1 + 1 == 2
+end
+
+function sub()
+    2 - 1 == 1
+end
+
+function multiply()
+    2 * 3 == 6
+end
+
+function divide()
+    8 / 2 == 4
+end
+

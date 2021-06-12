@@ -16,23 +16,23 @@ use crate::runtime::opcode::{OPERATION_ADD, OPERATION_SUB, OPERATION_MULTIPLY, O
 
 #[derive(Debug)]
 pub struct CompilerContext {
-    pub models: Vec<Model>,
-    pub functions: Vec<Function>,
-    pub constants: Vec<Object>,
+    models: Vec<Model>,
+    functions: Vec<Function>,
+    constants: Vec<Object>,
 
-    pub integer_constants_indices: HashMap<i64, usize>,
-    pub string_constants_indices: HashMap<String, usize>,
+    integer_constants_indices: HashMap<i64, usize>,
+    string_constants_indices: HashMap<String, usize>,
 
-    pub global_dependencies: HashSet<usize>,
+    global_dependencies: HashSet<usize>,
 
-    pub local_count: usize,
-    pub assemblies: HashMap<String, AssemblyState>,
-    pub local_values: HashMap<usize, usize>,
+    local_count: usize,
+    assemblies: HashMap<String, AssemblyState>,
+    local_values: HashMap<usize, usize>,
 
-    pub entry_point: usize,
+    entry_point: usize,
 
-    pub file_info: FileInfo,
-    pub debug_info: DebugInfo
+    file_info: FileInfo,
+    debug_info: DebugInfo
 }
 
 impl CompilerContext {
@@ -64,7 +64,7 @@ impl CompilerContext {
         index
     }
 
-    pub fn add_constant(&mut self, object: Object) -> usize {
+    fn add_constant(&mut self, object: Object) -> usize {
         match &object {
             Object::Integer(value) => {
                 if let Some(index) = self.integer_constants_indices.get(value) {
@@ -88,7 +88,7 @@ impl CompilerContext {
         }
     }
 
-    pub fn get_local_value(&self, local_index: usize) -> Option<Object> {
+    fn get_local_value(&self, local_index: usize) -> Option<Object> {
         if !self.local_values.contains_key(&local_index) {
             return None;
         };
@@ -102,13 +102,13 @@ impl CompilerContext {
         }
     }
 
-    pub fn add_model(&mut self, model: Model) -> usize {
+    fn add_model(&mut self, model: Model) -> usize {
         let index = self.models.len();
         self.models.push(model);
         index
     }
 
-    pub fn add_function(&mut self, function_state: FunctionState, name: &str, assembly_index: usize) -> usize {
+    fn add_function(&mut self, function_state: FunctionState, name: &str, assembly_index: usize) -> usize {
         let index = self.functions.len();
 
         let function = Function {
@@ -127,7 +127,7 @@ impl CompilerContext {
     }
 
     // find constant index by include definition
-    pub fn find_constant_index_by_include(&self, assembly_name: &str, public_name: &str) -> Option<usize> {
+    fn find_constant_index_by_include(&self, assembly_name: &str, public_name: &str) -> Option<usize> {
         if let Some(assembly_state) = self.assemblies.get(assembly_name) {
             if let Some(&index) = assembly_state.public_indices.get(public_name) {
                 return Some(index);
@@ -137,25 +137,13 @@ impl CompilerContext {
         None
     }
 
-    pub fn find_assembly(&self, name: &str) -> Option<&AssemblyState> {
-        if let Some(assembly_state) = self.assemblies.get(name) {
-            Some(assembly_state)
-        } else {
-            None
-        }
-    }
-
-    pub fn assembly_exists(&self, name: &str) -> bool {
-        self.find_assembly(name).is_some()
-    }
-
-    pub fn add_assembly(&mut self, assembly: AssemblyState) -> usize {
+    fn add_assembly(&mut self, assembly: AssemblyState) -> usize {
         let index = self.assemblies.len();
         self.assemblies.insert(assembly.filename.clone(), assembly);
         index
     }
 
-    pub fn get_loaded_assemblies(&self) -> HashSet<String> {
+    fn get_loaded_assemblies(&self) -> HashSet<String> {
         let mut loaded_assemblies = HashSet::new();
 
         for (filename, _) in self.assemblies.iter() {
