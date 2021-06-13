@@ -1,5 +1,5 @@
 use crate::intermediate::{Token, CompileErrorList, TokenValue, CompileError};
-use crate::intermediate::ast::{Document, Definition, ModelDefinition, FunctionDefinition, Statement, ImplementDefinition, ApplyDefinition, LocalDefinition, IncludeDefinition, ReturnStatement, Expression, IdentifierExpression, IntegerExpression, FloatExpression, BooleanExpression, ThisExpression, NullExpression, PrefixExpression, IfExpression, InfixExpression, CallExpression, StringExpression, InstanceGetExpression, LocalStatement, ArrayExpression, IndexGetExpression, ForStatement, BreakStatement};
+use crate::intermediate::ast::{Document, Definition, ModelDefinition, FunctionDefinition, Statement, ImplementDefinition, ApplyDefinition, LocalDefinition, IncludeDefinition, ReturnStatement, Expression, IdentifierExpression, IntegerExpression, FloatExpression, BooleanExpression, ThisExpression, NullExpression, PrefixExpression, IfExpression, InfixExpression, CallExpression, StringExpression, InstanceGetExpression, LocalStatement, ArrayExpression, IndexGetExpression, ForStatement, BreakStatement, RescueStatement};
 use crate::frontend::lexer::lex;
 use std::slice::Iter;
 use std::mem::discriminant;
@@ -442,6 +442,15 @@ impl<'a> ParserState<'a> {
         Some(Statement::Break(break_statement))
     }
 
+    fn parse_rescue_statement(&mut self) -> Option<Statement> {
+        let rescue_statement = RescueStatement {
+            token: self.current_token.clone()
+        };
+        self.next_token();
+
+        Some(Statement::Rescue(rescue_statement))
+    }
+
     fn parse_expression_statement(&mut self) -> Option<Statement> {
         if let Some(expression) = self.parse_expression(SymbolPriority::Lowest) {
             Some(Statement::Expression(expression))
@@ -527,8 +536,9 @@ impl<'a> ParserState<'a> {
         match self.current_token.value {
             TokenValue::Local => self.parse_local_statement(),
             TokenValue::Return => self.parse_return_statement(),
-            TokenValue::For => self.parse_for_statement(),
             TokenValue::Break => self.parse_break_statement(),
+            TokenValue::Rescue => self.parse_rescue_statement(),
+            TokenValue::For => self.parse_for_statement(),
             _ => self.parse_expression_statement()
         }
     }

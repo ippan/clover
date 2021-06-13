@@ -1,21 +1,24 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 
 use crate::intermediate::Position;
 use crate::runtime::assembly_information::{DebugInfo, FileInfo};
 use crate::runtime::object::Object;
 use crate::runtime::opcode::Instruction;
+use crate::runtime::state::Frame;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeError {
     pub message: String,
-    pub position: Position
+    pub position: Position,
+    pub stack: LinkedList<Frame>
 }
 
 impl RuntimeError {
     pub fn new(message: &str, position: Position) -> RuntimeError {
         RuntimeError {
             message: message.to_string(),
-            position
+            position,
+            stack: LinkedList::new()
         }
     }
 }
@@ -49,6 +52,7 @@ impl Model {
 pub struct Function {
     pub parameter_count: usize,
     pub local_count: usize,
+    pub rescue_position: usize,
     pub is_instance: bool,
 
     pub instructions: Vec<Instruction>
@@ -59,6 +63,7 @@ impl Function {
         Function {
             parameter_count: 0,
             local_count: 0,
+            rescue_position: 0,
             is_instance: false,
 
             instructions: Vec::new()

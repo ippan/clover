@@ -1,43 +1,11 @@
 local b, a
 
-model Test
-    a
-    b
-    c
-end
-
-implement Test
-    function new()
-        Test(30, 20, 10)
-    end
-
-    function not_new(a, b, c)
-        Test(a, b, c)
-    end
-
-    function show_a(this)
-        this.a
-    end
-
-    function show_b(this)
-        this.b
-    end
-
-    function _eq(left, right)
-        left.a == right.a and left.b == right.b and left.c == right.c
-    end
-
+function function_with_error()
+    1 / 0
 end
 
 function main()
-    local array = [ "test", "Hello", "Ok" ]
-
-    print(array.length)
-
-    local random = Random.new()
-    for i in 10
-        print(random.pick(array))
-    end
-
-    1.string
+    function_with_error()
+rescue
+    print("i am here")
 end

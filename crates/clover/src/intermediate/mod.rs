@@ -72,6 +72,8 @@ pub enum TokenValue {
     In,
     Break,
 
+    Rescue,
+
     None
 }
 

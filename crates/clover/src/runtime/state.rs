@@ -6,6 +6,7 @@ use crate::runtime::opcode::{Instruction, OpCode};
 use std::ops::Deref;
 use crate::runtime::object_property::{instance_get_array, instance_get_integer, instance_get_float, instance_get_string};
 
+#[derive(Debug, Clone)]
 pub struct Frame {
     pub locals: Vec<Object>,
     pub program_counter: usize,
@@ -163,6 +164,34 @@ impl State {
         self.globals.insert(name.to_string(), Object::NativeModel(index));
 
         index
+    }
+
+    pub fn step(&mut self) -> Result<(), RuntimeError> {
+        if let Err(mut error) = self.internal_step() {
+
+            let mut call_stack = LinkedList::new();
+
+            while self.frames.len() > 0 {
+                let rescue_position = self.program.functions.get(self.current_frame().function_index).unwrap().rescue_position;
+
+                if rescue_position > 0 {
+                    self.current_frame_as_mut().program_counter = rescue_position;
+                    return Ok(());
+                } else {
+                    let frame = self.frames.pop_back().unwrap();
+                    while self.stack.len() > frame.stack_size {
+                        self.stack.pop_back();
+                    };
+                    call_stack.push_front(frame);
+                }
+            }
+
+            error.stack = call_stack;
+
+            Err(error)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -480,7 +509,7 @@ impl State {
         Ok(())
     }
 
-    pub fn step(&mut self) -> Result<(), RuntimeError> {
+    fn internal_step(&mut self) -> Result<(), RuntimeError> {
         let instruction = self.current_instruction();
         let opcode = instruction.opcode();
 

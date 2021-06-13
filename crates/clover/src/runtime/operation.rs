@@ -37,7 +37,13 @@ impl State {
 
     fn integer_div(&self, left: i64, right: &Object) -> Result<Object, RuntimeError> {
         match right {
-            Object::Integer(value) => Ok(Object::Integer(left / value)),
+            Object::Integer(value) => {
+                if *value == 0 {
+                    Err(RuntimeError::new("divide by zero", self.last_position()))
+                } else {
+                    Ok(Object::Integer(left / value))
+                }
+            },
             Object::Float(_) => self.float_div(left as f64, right),
 
             _ => Err(RuntimeError::new("can not sub integer with object", self.last_position()))

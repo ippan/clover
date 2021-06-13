@@ -292,7 +292,9 @@ fn get_keyword(keyword: &str) -> Option<TokenValue> {
         "while"         => TokenValue::While,
         "for"           => TokenValue::For,
         "in"            => TokenValue::In,
-        "break"         => TokenValue::Break
+        "break"         => TokenValue::Break,
+
+        "rescue"        => TokenValue::Rescue
     }
 }
 

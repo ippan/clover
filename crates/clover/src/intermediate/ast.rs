@@ -158,6 +158,7 @@ pub enum Statement {
     Return(ReturnStatement),
     For(ForStatement),
     Break(BreakStatement),
+    Rescue(RescueStatement),
     Expression(Expression)
 }
 
@@ -174,6 +175,11 @@ pub struct ReturnStatement {
 
 #[derive(Clone, Debug)]
 pub struct BreakStatement {
+    pub token: Token
+}
+
+#[derive(Clone, Debug)]
+pub struct RescueStatement {
     pub token: Token
 }
 

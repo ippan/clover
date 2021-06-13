@@ -114,6 +114,7 @@ impl CompilerContext {
         let function = Function {
             parameter_count: function_state.parameter_count,
             local_count: function_state.local_count,
+            rescue_position: function_state.rescue_position,
             is_instance: function_state.is_instance,
 
             instructions: function_state.instructions
@@ -452,6 +453,8 @@ impl CompilerState {
     }
 
     fn compile_statement(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, statement: &Statement) {
+        function_state.depth += 1;
+
         match statement {
             Statement::Return(return_statement) => function_state.emit_return(return_statement.token.position),
             Statement::Expression(expression) => {
@@ -470,9 +473,18 @@ impl CompilerState {
                     };
                 }
             },
-            Statement::For(for_statement) => self.compile_for_statement(context, function_state, for_statement),
-            Statement::Break(break_statement) => function_state.emit_break(break_statement.token.position)
+            Statement::Break(break_statement) => function_state.emit_break(break_statement.token.position),
+            Statement::Rescue(rescue_statement) => {
+                if function_state.depth > 1 {
+                    self.errors.push_error(&rescue_statement.token, "rescue can only in the layer of function");
+                } else {
+                    function_state.emit_return(rescue_statement.token.position);
+                    function_state.rescue_position = function_state.get_next_instruction_index();
+                }
+            },
+            Statement::For(for_statement) => self.compile_for_statement(context, function_state, for_statement)
         }
+        function_state.depth -= 1;
     }
 
     fn compile_include_definition(&mut self, context: &mut CompilerContext, include_definition: &IncludeDefinition) {
