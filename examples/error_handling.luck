@@ -1,0 +1,11 @@
+
+function function_with_error()
+    1 / 0
+end
+
+function main()
+    function_with_error()
+
+rescue
+    print("error recovery here")
+end

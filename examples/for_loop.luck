@@ -1,0 +1,27 @@
+function for_number()
+    for i in 10
+        print(i)
+    end
+end
+
+function for_array()
+    local array = [ 1, 2, 3, 4, 5 ]
+    for value in array
+        print(value)
+    end
+end
+
+function for_break()
+    for i in 10
+        print(i)
+        if i > 5
+            break
+        end
+    end
+end
+
+function main()
+    for_number()
+    for_array()
+    for_break()
+end

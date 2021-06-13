@@ -1,5 +1,6 @@
 
-function factorial(number)
+# function with "public" prefix and include in other file
+public function factorial(number)
     local result = 1
 
     # for - start from 0 to number - 1

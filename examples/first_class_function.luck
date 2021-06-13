@@ -1,0 +1,20 @@
+function method_a(value)
+    value * value
+end
+
+function method_b(value)
+    value + value
+end
+
+
+function main()
+    local factor = 10
+    
+    local method = if factor == 10
+        method_a
+    else
+        method_b
+    end
+
+    print(method(10))
+end

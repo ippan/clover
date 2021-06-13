@@ -1,5 +1,6 @@
 
-function factorial(number)
+# function with "public" prefix and include in other file
+public function factorial(number)
     if number > 1
         number * factorial(number - 1)
     else

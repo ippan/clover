@@ -5,7 +5,6 @@ use crate::runtime::state::State;
 use crate::runtime::program::RuntimeError;
 use std::ops::Deref;
 
-
 pub type Reference<T> = Rc<RefCell<T>>;
 
 pub fn make_reference<T>(object: T) -> Reference<T> {
@@ -122,6 +121,10 @@ impl Object {
     pub fn is_null(&self) -> bool { matches!(self, Object::Null) }
 }
 
+fn objects_to_string(objects: &Vec<Object>) -> String {
+    objects.iter().map(|value| value.to_string()).collect::<Vec<String>>().join(", ")
+}
+
 impl ToString for Object {
     fn to_string(&self) -> String {
         match self {
@@ -131,6 +134,9 @@ impl ToString for Object {
             Object::Boolean(value) => value.to_string(),
             Object::Null => "null".to_string(),
 
+            Object::Model(index) => "{ (".to_string() + index.to_string().as_str() + ") }",
+            Object::Instance(instance) => "{ (".to_string() + instance.borrow().deref().model_index.to_string().as_str() + ") " + objects_to_string(&instance.borrow().deref().properties).as_str() + " }",
+            Object::Array(array) => "[ ".to_string() + objects_to_string(array.borrow().deref()).as_str() + " ]",
             _ => "Unknown".to_string()
         }
     }

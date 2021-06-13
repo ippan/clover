@@ -1,0 +1,10 @@
+include factorial from "./factorial_recursive.luck"
+include factorial as factorial_for_loop from "./factorial_for_loop.luck"
+
+function main()
+    local result = factorial(10)
+    print(result)
+
+    local result_for_loop = factorial_for_loop(10)
+    print(result)
+end

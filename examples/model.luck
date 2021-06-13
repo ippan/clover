@@ -1,0 +1,43 @@
+public model Vector
+    x
+    y
+end
+
+# use implement to add function to model
+implement Vector
+    function one()
+        Vector(1.0, 1.0)
+    end
+
+    function zero()
+        Vector(0.0, 0.0)
+    end
+
+    # first parameter is "this", is a instance function
+    function length(this)
+        Math.pow(this.x * this.x + this.y * this.y, 0.5)
+    end
+
+end
+
+model Position
+    x
+    y
+end
+
+# add all function in Vector to Position
+apply Vector to Position
+
+function main()
+    local vector = Vector.one()
+
+    print(vector.length())
+
+    vector.x = 3
+    vector.y = 4
+
+    print(vector.length())
+
+    local position = Position(8, 6)
+    print(position.length())
+end

@@ -1,0 +1,12 @@
+
+
+function main()
+    local factor = 10
+
+    if factor == 10
+        print("factor is equal to 10")
+        return
+    end
+
+    print("factor is not equal to 10")
+end

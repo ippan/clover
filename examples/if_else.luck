@@ -1,0 +1,31 @@
+function regular_if()
+    local factor = 10
+
+    if factor == 20
+        print("catch by if")
+    elseif factor == 10
+        print("catch by elseif")
+    else
+        print("catch by else")
+    end
+end
+
+function as_expression()
+    local factor = 10
+
+    local value = if factor == 20
+        "catch by if"
+    elseif factor == 10
+        "catch by elseif"
+    else
+        "catch by else"
+    end
+
+    print(value)
+end
+
+function main()
+    regular_if()
+
+    as_expression()
+end
