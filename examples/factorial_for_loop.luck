@@ -1,0 +1,17 @@
+
+function factorial(number)
+    local result = 1
+
+    # for - start from 0 to number - 1
+    for i in number
+        result *= (i + 1)
+    end
+
+    result
+end
+
+function main()
+    local result = factorial(10)
+
+    print(result)
+end

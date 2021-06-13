@@ -1,0 +1,14 @@
+
+function factorial(number)
+    if number > 1
+        number * factorial(number - 1)
+    else
+        1
+    end
+end
+
+function main()
+    local result = factorial(10)
+
+    print(result)
+end

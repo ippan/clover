@@ -554,6 +554,9 @@ impl CompilerState {
 
     // return constant index
     fn compile_function_definition(&mut self, context: &mut CompilerContext, function_definition: &FunctionDefinition) -> usize {
+        // define function before compile function body, so we can do recursive call
+        let local_index = self.define_local_by_identifier(context, &function_definition.name);
+
         let function_state = self.compile_function_definition_base(context, function_definition);
 
         // can not have instance function here
@@ -564,8 +567,8 @@ impl CompilerState {
             let function_index = context.add_function(function_state, &function_definition.name.value.to_string(), self.assembly_state.index);
             let constant_index = context.add_constant(Object::Function(function_index));
 
-            if let Some(local_index) = self.define_local_by_identifier(context, &function_definition.name) {
-                context.local_values.insert(local_index, constant_index);
+            if let Some(index) = local_index {
+                context.local_values.insert(index, constant_index);
             };
 
             if &function_definition.name.value.to_string() == "main" {

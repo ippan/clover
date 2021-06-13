@@ -1,5 +1,0 @@
-include World from "./world.luck"
-
-public model Hello
-    hello
-end
