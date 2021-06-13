@@ -1,5 +1,5 @@
 use clover::runtime::state::State;
-use clover::runtime::object::{Object, NativeModel};
+use clover::runtime::object::{Object, NativeModel, make_reference};
 use clover::runtime::program::RuntimeError;
 
 pub struct IO;
@@ -31,6 +31,6 @@ fn readline(state: &mut State, _parameters: &[ Object ]) -> Result<Object, Runti
     if let Err(error) = std::io::stdin().read_line(&mut line) {
         Err(RuntimeError::new(error.to_string().as_str(), state.last_position()))
     } else {
-        Ok(Object::String(line))
+        Ok(Object::String(make_reference(line)))
     }
 }

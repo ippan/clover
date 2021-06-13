@@ -1,7 +1,8 @@
-use crate::runtime::object::{Object, Reference, ModelInstance};
+use crate::runtime::object::{Object, Reference, ModelInstance, make_reference};
 use crate::runtime::program::RuntimeError;
 use crate::runtime::opcode::OPERATION_EQUAL;
 use crate::runtime::state::State;
+use std::ops::Deref;
 
 const META_METHODS: &[ &str ] = &[ "_add", "_sub", "_mul", "_div", "_mod", "_eq", "_gt", "_lt", "_gte", "_lte" ];
 
@@ -11,7 +12,7 @@ impl State {
         match right {
             Object::Integer(value) => Ok(Object::Integer(left + value)),
             Object::Float(_) => self.float_add(left as f64, right),
-            Object::String(value) => Ok(Object::String(left.to_string() + value)),
+            Object::String(value) => Ok(Object::String(make_reference(left.to_string() + value.borrow().deref()))),
 
             _ => Err(RuntimeError::new("can not add integer with object", self.last_position()))
         }
@@ -125,7 +126,7 @@ impl State {
         match right {
             Object::Float(value) => Ok(Object::Float(left + value)),
             Object::Integer(value) => Ok(Object::Float(left + *value as f64)),
-            Object::String(value) => Ok(Object::String(left.to_string() + value)),
+            Object::String(value) => Ok(Object::String(make_reference(left.to_string() + value.borrow().deref()))),
 
             _ => Err(RuntimeError::new("can not add float with object", self.last_position()))
         }
@@ -229,11 +230,11 @@ impl State {
         }
     }
 
-    fn string_operation(&self, left: &str, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
+    fn string_operation(&self, left: &Reference<String>, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
         match operand {
             0 => {
                 match right {
-                    Object::String(_) | Object::Integer(_) | Object::Float(_) | Object::Boolean(_) | Object::Null => Ok(Object::String(left.to_string() + &right.to_string())),
+                    Object::String(_) | Object::Integer(_) | Object::Float(_) | Object::Boolean(_) | Object::Null => Ok(Object::String(make_reference(left.borrow().deref().to_string() + &right.to_string()))),
                     _ => Err(RuntimeError::new("can not add string with object", self.last_position()))
                 }
             },

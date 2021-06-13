@@ -144,8 +144,8 @@ impl State {
     pub fn execute(&mut self) -> Result<Object, RuntimeError> {
         for &global_index in self.program.global_dependencies.iter() {
             if let Some(Object::String(global_name)) = self.program.constants.get(global_index) {
-                if !self.globals.contains_key(global_name) {
-                    return Err(RuntimeError::new(&format!("this program need a global variable [{}] which is not found in this state", global_name), Position::none()));
+                if !self.globals.contains_key(global_name.borrow().deref()) {
+                    return Err(RuntimeError::new(&format!("this program need a global variable [{}] which is not found in this state", global_name.borrow().deref()), Position::none()));
                 }
             }
         }
@@ -316,14 +316,14 @@ impl State {
 
             Object::Model(model_index) => self.index_get_model(model_index, &index)?,
             Object::Instance(model_instance) => self.index_get_model_instance(model_instance, &index)?,
-            Object::NativeModel(model_index) => self.instance_get_native_model(model_index, index.as_str())?,
-            Object::NativeInstance(instance) => self.instance_get_native_instance(instance, index.as_str())?,
+            Object::NativeModel(model_index) => self.instance_get_native_model(model_index, index.as_reference_string().borrow().deref())?,
+            Object::NativeInstance(instance) => self.instance_get_native_instance(instance, index.as_reference_string().borrow().deref())?,
 
-            Object::Integer(value) => instance_get_integer(self, value, index.as_str())?,
-            Object::Float(value) => instance_get_float(self, value, index.as_str())?,
-            Object::String(value) => instance_get_string(self, value, index.as_str())?,
+            Object::Integer(value) => instance_get_integer(self, value, index.as_reference_string().borrow().deref())?,
+            Object::Float(value) => instance_get_float(self, value, index.as_reference_string().borrow().deref())?,
+            Object::String(value) => instance_get_string(self, value, index.as_reference_string().borrow().deref())?,
 
-            Object::Array(array) => instance_get_array(self, array, index.as_str())?,
+            Object::Array(array) => instance_get_array(self, array, index.as_reference_string().borrow().deref())?,
             _ => {
                 return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
             }
@@ -337,7 +337,7 @@ impl State {
         if let Object::String(key) = &index {
             let model = self.program.models.get(model_index).unwrap();
 
-            if let Some(&function_index) = model.functions.get(key) {
+            if let Some(&function_index) = model.functions.get(key.borrow().deref()) {
                 self.push(Object::Function(function_index));
                 return Ok(());
             };
@@ -352,13 +352,13 @@ impl State {
             let model = self.program.models.get(model_instance.borrow().deref().model_index).unwrap();
 
             // have property?
-            if let Some(&property_index) = model.property_indices.get(key) {
+            if let Some(&property_index) = model.property_indices.get(key.borrow().deref()) {
                 self.push(model_instance.borrow().deref().properties[property_index].clone());
                 return Ok(());
             };
 
             // have function?
-            if let Some(&function_index) = model.functions.get(key) {
+            if let Some(&function_index) = model.functions.get(key.borrow().deref()) {
                 if self.program.functions[function_index].is_instance {
                     self.push(Object::InstanceFunction(Box::new(Object::Instance(model_instance.clone())), function_index));
                 } else {
@@ -419,7 +419,7 @@ impl State {
 
         match instance {
             Object::Instance(model_instance) => self.index_set_model_instance(model_instance, &index)?,
-            Object::NativeInstance(instance) => instance.borrow_mut().instance_set(index.as_str(), self.top())?,
+            Object::NativeInstance(instance) => instance.borrow_mut().instance_set(index.as_reference_string().borrow().deref(), self.top())?,
             _ => {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
             }
@@ -442,7 +442,7 @@ impl State {
             let model = self.program.models.get(model_instance.borrow().deref().model_index).unwrap();
 
             // have property?
-            if let Some(&property_index) = model.property_indices.get(key) {
+            if let Some(&property_index) = model.property_indices.get(key.borrow().deref()) {
                 self.index_set_model_instance_by_index(model_instance, property_index)?;
             };
 
@@ -534,7 +534,7 @@ impl State {
 
             OpCode::GlobalGet => {
                 let global_object_option = if let Some(Object::String(global_name)) = self.program.constants.get(instruction.operand() as usize) {
-                    if let Some(object) = self.globals.get(global_name) {
+                    if let Some(object) = self.globals.get(global_name.borrow().deref()) {
                        Some(object.clone())
                     } else {
                         return Err(RuntimeError::new("global not found", self.last_position()));
@@ -550,7 +550,7 @@ impl State {
             },
             OpCode::GlobalSet => {
                 if let Some(Object::String(global_name)) = self.program.constants.get(instruction.operand() as usize) {
-                    if let Some(object) = self.globals.get_mut(global_name) {
+                    if let Some(object) = self.globals.get_mut(global_name.borrow().deref()) {
                         *object = self.stack.back().unwrap().clone();
                     } else {
                         return Err(RuntimeError::new("global not found", self.last_position()));

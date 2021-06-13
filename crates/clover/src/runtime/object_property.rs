@@ -1,11 +1,12 @@
-use crate::runtime::object::{Object, Reference};
+use crate::runtime::object::{Object, Reference, make_reference};
 use crate::runtime::state::State;
 use crate::runtime::program::RuntimeError;
+use std::ops::Deref;
 
 pub fn instance_get_integer(state: &mut State, value: i64, key: &str) -> Result<(), RuntimeError> {
 
     let object =match key {
-        "string" => Object::String(value.to_string()),
+        "string" => Object::String(make_reference(value.to_string())),
         "integer" => Object::Integer(value),
         "float" => Object::Float(value as f64),
 
@@ -19,7 +20,7 @@ pub fn instance_get_integer(state: &mut State, value: i64, key: &str) -> Result<
 
 pub fn instance_get_float(state: &mut State, value: f64, key: &str) -> Result<(), RuntimeError> {
     let object = match key {
-        "string" => Object::String(value.to_string()),
+        "string" => Object::String(make_reference(value.to_string())),
         "integer" => Object::Integer(value as i64),
         "float" => Object::Float(value),
 
@@ -31,18 +32,18 @@ pub fn instance_get_float(state: &mut State, value: f64, key: &str) -> Result<()
     Ok(())
 }
 
-pub fn instance_get_string(state: &mut State, value: String, key: &str) -> Result<(), RuntimeError> {
+pub fn instance_get_string(state: &mut State, value: Reference<String>, key: &str) -> Result<(), RuntimeError> {
     let object = match key {
         "string" => Object::String(value),
         "integer" => {
-            if let Ok(integer) = value.parse::<i64>() {
+            if let Ok(integer) = value.borrow().deref().parse::<i64>() {
                 Object::Integer(integer)
             } else {
                 Object::Null
             }
         },
         "float" => {
-            if let Ok(float) = value.parse::<f64>() {
+            if let Ok(float) = value.borrow().deref().parse::<f64>() {
                 Object::Float(float)
             } else {
                 Object::Null

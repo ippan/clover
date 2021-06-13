@@ -6,13 +6,13 @@ use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
 use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression, IndexGetExpression, ForStatement};
-use crate::runtime::object::Object;
+use crate::runtime::object::{Object, make_reference};
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
 use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
-use std::ops::Deref;
 use crate::runtime::opcode::{OPERATION_ADD, OPERATION_SUB, OPERATION_MULTIPLY, OPERATION_DIVIDE, OPERATION_MOD, OPERATION_EQUAL, OPERATION_GREATER, OPERATION_LESS, OPERATION_GREATER_EQUAL, OPERATION_LESS_EQUAL, OPERATION_AND, OPERATION_OR};
+use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct CompilerContext {
@@ -76,11 +76,11 @@ impl CompilerContext {
                 }
             },
             Object::String(value) => {
-                if let Some(index) = self.string_constants_indices.get(value) {
+                if let Some(index) = self.string_constants_indices.get(value.borrow().deref()) {
                     *index
                 } else {
                     let index = self.add_constant_no_check(object.clone());
-                    self.string_constants_indices.insert(value.to_string(), index);
+                    self.string_constants_indices.insert(value.borrow().to_string(), index);
                     index
                 }
             },
@@ -216,7 +216,7 @@ impl CompilerState {
 
     fn compile_string_expression(&mut self, context: &mut CompilerContext, function_state: &mut FunctionState, string_expression: &StringExpression) {
         if let TokenValue::String(value) = &string_expression.token.value {
-            let index = context.add_constant(Object::String(value.clone()));
+            let index = context.add_constant(Object::String(make_reference(value.clone())));
             function_state.emit(OpCode::PushConstant.to_instruction(index as u64), string_expression.token.position);
         }
     }
@@ -237,7 +237,7 @@ impl CompilerState {
         } else if let Some(&index) = self.locals.get(&identifier) {
             function_state.emit(OpCode::ContextGet.to_instruction(index as u64), identifier_expression.token.position);
         } else {
-            let index = context.add_constant(Object::String(identifier));
+            let index = context.add_constant(Object::String(make_reference(identifier)));
             context.global_dependencies.insert(index);
             function_state.emit(OpCode::GlobalGet.to_instruction(index as u64), identifier_expression.token.position);
         }
@@ -259,7 +259,7 @@ impl CompilerState {
                 } else if let Some(&index) = self.locals.get(&identifier) {
                     function_state.emit(OpCode::ContextSet.to_instruction(index as u64), infix_expression.infix.position);
                 } else {
-                    let index = context.add_constant(Object::String(identifier));
+                    let index = context.add_constant(Object::String(make_reference(identifier)));
                     context.global_dependencies.insert(index);
                     function_state.emit(OpCode::GlobalSet.to_instruction(index as u64), infix_expression.infix.position);
                 }

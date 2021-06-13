@@ -36,7 +36,6 @@ pub trait NativeModelInstance {
 pub enum Object {
     Integer(i64),
     Float(f64),
-    String(String),
     Boolean(bool),
     Null,
 
@@ -50,6 +49,7 @@ pub enum Object {
     NativeModel(usize),
 
     // reference types
+    String(Reference<String>),
     Instance(Reference<ModelInstance>),
     NativeInstance(Reference<dyn NativeModelInstance>),
 
@@ -110,11 +110,11 @@ impl Object {
         }
     }
 
-    pub fn as_str(&self) -> &str {
+    pub fn as_reference_string(&self) -> Reference<String> {
         if let Object::String(value) = self {
-            value.as_str()
+            value.clone()
         } else {
-            ""
+            make_reference("".to_string())
         }
     }
 
@@ -130,7 +130,7 @@ impl ToString for Object {
         match self {
             Object::Integer(value) => value.to_string(),
             Object::Float(value) => value.to_string(),
-            Object::String(value) => value.clone(),
+            Object::String(value) => value.borrow().deref().clone(),
             Object::Boolean(value) => value.to_string(),
             Object::Null => "null".to_string(),
 
