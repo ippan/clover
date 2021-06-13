@@ -1,0 +1,36 @@
+
+local a
+
+function in_file()
+    a = 1
+    a += 1
+
+    a == 2
+end
+
+function in_file_again()
+    a += 1
+
+    a == 3
+end
+
+function in_function()
+    local a = 10
+
+    a += 20
+
+    a == 30
+end
+
+function in_scope()
+    local a = 10
+
+    if true
+        local a = 20
+        a += 10
+        a == 30
+        return
+    end
+
+    false
+end

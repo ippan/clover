@@ -6,7 +6,6 @@ function method_b(value)
     value + value
 end
 
-
 function main()
     local factor = 10
     

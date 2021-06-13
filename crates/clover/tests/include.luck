@@ -1,0 +1,17 @@
+include factorial from "./function.luck"
+include factorial as my_factorial from "./function.luck"
+include Rectangle from "./model.luck"
+
+function include_function()
+    factorial(10) == 3628800
+end
+
+function include_with_nickname()
+    my_factorial(10) == 3628800
+end
+
+function include_model()
+    local rect = Rectangle(20, 10)
+
+    rect.width == 20 and rect.height == 10 and rect.area() == 200
+end

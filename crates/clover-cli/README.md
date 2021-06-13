@@ -4,10 +4,20 @@
 [![CI](https://github.com/ippan/clover/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/ippan/clover/actions/workflows/build_and_test.yml)
 ![Crates.io](https://img.shields.io/crates/l/clover)
 
-the executable for the Clover language.
+the executable for the [Clover](https://github.com/ippan/clover) scripting language.
 
 ## CLI
 
-```sh
+### Install
+
+use [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) to install the clover-cli
+
+```shell
+cargo install clover-cli
+```
+
+### Usage
+
+```shell
 clover examples/main.luck
 ```

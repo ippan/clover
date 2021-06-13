@@ -1,0 +1,40 @@
+include Rectangle from "./model.luck"
+
+public function factorial(number)
+    local result = 1
+
+    # for - start from 0 to number - 1
+    for i in number
+        result *= (i + 1)
+    end
+
+    result
+end
+
+function recursive()
+    factorial(10) == 3628800
+end
+
+function with_return()
+    local factor = 0
+
+    if factor == 0
+        true
+        return
+    end
+
+    false
+end
+
+function first_class_function()
+    local f = factorial
+
+    f(10) == 3628800
+end
+
+function instance_first_class_function()
+    local rect = Rectangle(10, 20)
+    local a = rect.area
+
+    a() == 200
+end

@@ -6,10 +6,17 @@
 
 Clover Scripting Language Standard Library
 
+this is the standard library for [Clover](https://github.com/ippan/clover) scripting language.
+
 still in development~
 
 ## Implemented Models
-* random
+* IO
+  * print
+  * readline
+* Random
+* Math
+  * pow
 
 ## Usage
 

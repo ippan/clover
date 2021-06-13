@@ -14,37 +14,51 @@ still in development~
 ## Features
 * bytecode
 * first class function
+* error handling
 
 ## Example
 
+You can go to [examples](https://github.com/ippan/clover/tree/master/examples) directory for more examples
+
+### Hello World
+
 ```ruby
-include Vector2D as Vector from "./vector"
-
-public model Rect
-  start
-  size
-end
-
-implement Rect
-  function new()
-    local rect = Rect()
-    rect.start = Vector.new()
-    rect.size = Vector.new()
-    rect
-  end
-end
-
-model MyRect
-end
-
-# copy all function in Rect to MyRect
-apply Rect to MyRect
-
 function main()
-  local rect = MyRect.new()
-  rect
+    print("hello world!")
 end
 ```
+
+### Include other file
+
+rectangle.luck
+```ruby
+public model Rectangle
+    width
+    height
+end
+
+implement Rectangle
+    function area(this)
+        this.width * this.height
+    end
+end
+```
+
+main.luck
+```ruby
+include Rectangle from "./rectangle.luck"
+
+function main()
+    local rect = Rectangle(20, 30)
+    print(rect.area())
+end
+```
+
+## Editor support
+
+### Visual Studio Code
+
+Use [Clover VSCode Support](https://github.com/ippan/vscode-clover) for code highlighting in [Visual Studio Code](https://code.visualstudio.com/)
 
 ## Integrate to your project
 
@@ -60,6 +74,16 @@ match result {
 
 ## CLI
 
-```sh
+### Install
+
+use [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) to install the clover-cli
+
+```shell
+cargo install clover-cli
+```
+
+### Usage
+
+```shell
 clover examples/main.luck
 ```

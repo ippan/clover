@@ -1,0 +1,36 @@
+
+public model Rectangle
+    width
+    height
+end
+
+implement Rectangle
+    function area(this)
+        this.width * this.height
+    end
+end
+
+function regular()
+    local rect = Rectangle(10, 20)
+
+    rect.width == 10 and rect.height == 20 and rect.area() == 200
+end
+
+model MyRectangle
+    width
+    height
+end
+
+apply Rectangle to MyRectangle
+
+implement MyRectangle
+    function new()
+        MyRectangle(20, 30)
+    end
+end
+
+function with_apply()
+    local rect = MyRectangle.new()
+
+    rect.width == 20 and rect.height == 30 and rect.area() == 600
+end
