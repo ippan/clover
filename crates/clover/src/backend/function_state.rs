@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::runtime::opcode::{Instruction, OpCode};
 use crate::intermediate::{Positions, Position};
+use crate::runtime::program::Program;
 
 pub type Scope = HashMap<String, usize>;
 
@@ -68,7 +69,7 @@ impl FunctionState {
 
     pub fn remove_pop_or_push_null(&mut self) {
         if self.instructions.len() == 0 {
-            self.emit_opcode_without_position(OpCode::PushNull);
+            self.emit(OpCode::PushConstant.to_instruction(Program::NULL_CONSTANT_INDEX as u64), self.get_last_position());
             return;
         };
 
@@ -82,7 +83,7 @@ impl FunctionState {
                 // do nothing
             },
             _ => {
-                self.emit_opcode_without_position(OpCode::PushNull);
+                self.emit(OpCode::PushConstant.to_instruction(Program::NULL_CONSTANT_INDEX as u64), self.get_last_position());
             }
         }
     }

@@ -26,14 +26,17 @@ impl RuntimeError {
 #[derive(Debug, Clone)]
 pub struct Model {
     pub property_indices: HashMap<String, usize>,
-    pub functions: HashMap<String, usize>
+    pub functions: HashMap<String, usize>,
+
+    pub property_names: Vec<String>
 }
 
 impl Model {
     pub fn new() -> Model {
         Model {
             property_indices: HashMap::new(),
-            functions: HashMap::new()
+            functions: HashMap::new(),
+            property_names: Vec::new()
         }
     }
 
@@ -43,6 +46,7 @@ impl Model {
         };
 
         self.property_indices.insert(property_name.to_string(), self.property_indices.len());
+        self.property_names.push(property_name.to_string());
 
         true
     }
@@ -90,4 +94,11 @@ pub struct Program {
 
     pub file_info: Option<FileInfo>,
     pub debug_info: Option<DebugInfo>
+}
+
+impl Program {
+    pub const NULL_CONSTANT_INDEX: usize = 0;
+    pub const TRUE_CONSTANT_INDEX: usize = 1;
+    pub const FALSE_CONSTANT_INDEX: usize = 2;
+    pub const DEFAULT_CONSTANTS: [Object; 3] = [ Object::Null, Object::Boolean(true), Object::Boolean(false) ];
 }

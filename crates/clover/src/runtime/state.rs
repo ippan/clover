@@ -521,8 +521,6 @@ impl State {
                 let constant = self.program.constants[instruction.operand() as usize].clone();
                 self.push(constant);
             },
-            OpCode::PushNull => self.push(Object::Null),
-            OpCode::PushBoolean => self.push(Object::Boolean(instruction.operand() == 1)),
             OpCode::Return => { self.pop_frame(); },
 
             OpCode::LocalGet => self.push(self.current_frame().locals.get(instruction.operand() as usize).unwrap().clone()),

@@ -40,7 +40,7 @@ impl CompilerContext {
         CompilerContext {
             models: Vec::new(),
             functions: Vec::new(),
-            constants: Vec::new(),
+            constants: Program::DEFAULT_CONSTANTS.to_vec(),
 
             integer_constants_indices: HashMap::new(),
             string_constants_indices: HashMap::new(),
@@ -223,8 +223,8 @@ impl CompilerState {
 
     fn compile_boolean_expression(&mut self, _context: &mut CompilerContext, function_state: &mut FunctionState, bool_expression: &BooleanExpression) {
         match bool_expression.token.value {
-            TokenValue::True => { function_state.emit(OpCode::PushBoolean.to_instruction(1), bool_expression.token.position); },
-            TokenValue::False => { function_state.emit(OpCode::PushBoolean.to_instruction(0), bool_expression.token.position); },
+            TokenValue::True => { function_state.emit(OpCode::PushConstant.to_instruction(Program::TRUE_CONSTANT_INDEX as u64), bool_expression.token.position); },
+            TokenValue::False => { function_state.emit(OpCode::PushConstant.to_instruction(Program::FALSE_CONSTANT_INDEX as u64), bool_expression.token.position); },
             _ => self.errors.push_error(&bool_expression.token, "Unexpect token")
         }
     }
@@ -368,7 +368,7 @@ impl CompilerState {
 
             function_state.remove_pop_or_push_null();
         } else {
-            function_state.emit_opcode_without_position(OpCode::PushNull);
+            function_state.emit(OpCode::PushConstant.to_instruction(Program::NULL_CONSTANT_INDEX as u64), function_state.get_last_position());
         };
 
         let jump_to_end_instruction_index = function_state.emit_opcode_without_position(OpCode::Jump);
@@ -393,7 +393,7 @@ impl CompilerState {
             Expression::Float(float_expression) => self.compile_float_expression(context, function_state, float_expression),
             Expression::String(string_expression) => self.compile_string_expression(context, function_state, string_expression),
             Expression::Boolean(bool_expression) => self.compile_boolean_expression(context, function_state, bool_expression),
-            Expression::Null(null_expression) => { function_state.emit_opcode(OpCode::PushNull, null_expression.token.position); },
+            Expression::Null(null_expression) => { function_state.emit(OpCode::PushConstant.to_instruction(Program::NULL_CONSTANT_INDEX as u64), null_expression.token.position); },
             Expression::Array(array_expression) => self.compile_array_expression(context, function_state, array_expression),
             Expression::Identifier(identifier_expression) => self.compile_identifier_expression(context, function_state, identifier_expression),
             Expression::Prefix(prefix_expression) => self.compile_prefix_expression(context, function_state, prefix_expression),

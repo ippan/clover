@@ -22,11 +22,7 @@ pub enum OpCode {
 
     // operand -> index of constant
     PushConstant    = 0x02,
-    PushNull        = 0x03,
 
-    // operand = 0 -> false
-    // operand = 1 -> true
-    PushBoolean     = 0x04,
     Return          = 0x05,
 
     // operand -> index of local
@@ -86,8 +82,7 @@ impl Instruction {
 
             0x01 => OpCode::Pop,
             0x02 => OpCode::PushConstant,
-            0x03 => OpCode::PushNull,
-            0x04 => OpCode::PushBoolean,
+
             0x05 => OpCode::Return,
 
             0x06 => OpCode::LocalSet,
