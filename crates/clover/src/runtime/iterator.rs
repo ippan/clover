@@ -34,6 +34,19 @@ impl State {
                     // iterator greater than enumerable array len, finish loop
                     true
                 }
+            },
+            Object::Instance(instance) => {
+                let model_index = instance.borrow().model_index;
+                let model = &self.get_program().models[model_index];
+                let index = iterator as usize;
+
+                if index < model.property_names.len() {
+                    let object = Object::String(model.property_names[index].clone());
+                    self.push(object);
+                    false
+                } else {
+                    true
+                }
             }
             _ => true
         };

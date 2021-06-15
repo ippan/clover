@@ -1,6 +1,6 @@
 use crate::runtime::object::{Object, Reference, ModelInstance, make_reference};
 use crate::runtime::program::RuntimeError;
-use crate::runtime::opcode::OPERATION_EQUAL;
+use crate::runtime::opcode::{OPERATION_ADD, OPERATION_SUB, OPERATION_MULTIPLY, OPERATION_DIVIDE, OPERATION_MOD, OPERATION_EQUAL, OPERATION_GREATER, OPERATION_LESS, OPERATION_GREATER_EQUAL, OPERATION_LESS_EQUAL};
 use crate::runtime::state::State;
 use std::ops::Deref;
 
@@ -107,16 +107,16 @@ impl State {
 
     fn integer_operation(&self, left: i64, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
         match operand {
-            0 => self.integer_add(left, right),
-            1 => self.integer_sub(left, right),
-            2 => self.integer_mul(left, right),
-            3 => self.integer_div(left, right),
-            4 => self.integer_mod(left, right),
-            5 => self.integer_eq(left, right),
-            6 => self.integer_gt(left, right),
-            7 => self.integer_lt(left, right),
-            8 => self.integer_gte(left, right),
-            9 => self.integer_lte(left, right),
+            OPERATION_ADD => self.integer_add(left, right),
+            OPERATION_SUB => self.integer_sub(left, right),
+            OPERATION_MULTIPLY => self.integer_mul(left, right),
+            OPERATION_DIVIDE => self.integer_div(left, right),
+            OPERATION_MOD => self.integer_mod(left, right),
+            OPERATION_EQUAL => self.integer_eq(left, right),
+            OPERATION_GREATER => self.integer_gt(left, right),
+            OPERATION_LESS => self.integer_lt(left, right),
+            OPERATION_GREATER_EQUAL => self.integer_gte(left, right),
+            OPERATION_LESS_EQUAL => self.integer_lte(left, right),
 
             _ => Err(RuntimeError::new("unknown operation", self.last_position()))
         }
@@ -215,16 +215,16 @@ impl State {
 
     fn float_operation(&self, left: f64, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
         match operand {
-            0 => self.float_add(left, right),
-            1 => self.float_sub(left, right),
-            2 => self.float_mul(left, right),
-            3 => self.float_div(left, right),
-            4 => self.float_mod(left, right),
-            5 => self.float_eq(left, right),
-            6 => self.float_gt(left, right),
-            7 => self.float_lt(left, right),
-            8 => self.float_gte(left, right),
-            9 => self.float_lte(left, right),
+            OPERATION_ADD => self.float_add(left, right),
+            OPERATION_SUB => self.float_sub(left, right),
+            OPERATION_MULTIPLY => self.float_mul(left, right),
+            OPERATION_DIVIDE => self.float_div(left, right),
+            OPERATION_MOD => self.float_mod(left, right),
+            OPERATION_EQUAL => self.float_eq(left, right),
+            OPERATION_GREATER => self.float_gt(left, right),
+            OPERATION_LESS => self.float_lt(left, right),
+            OPERATION_GREATER_EQUAL => self.float_gte(left, right),
+            OPERATION_LESS_EQUAL => self.float_lte(left, right),
 
             _ => Err(RuntimeError::new("unknown operation", self.last_position()))
         }
@@ -232,12 +232,18 @@ impl State {
 
     fn string_operation(&self, left: &Reference<String>, right: &Object, operand: usize) -> Result<Object, RuntimeError> {
         match operand {
-            0 => {
+            OPERATION_ADD => {
                 match right {
                     Object::String(_) | Object::Integer(_) | Object::Float(_) | Object::Boolean(_) | Object::Null => Ok(Object::String(make_reference(left.borrow().deref().to_string() + &right.to_string()))),
                     _ => Err(RuntimeError::new("can not add string with object", self.last_position()))
                 }
             },
+            OPERATION_EQUAL => {
+                match right {
+                    Object::String(value) => Ok(Object::Boolean(left.borrow().deref().eq(value.borrow().deref()))),
+                    _ => Err(RuntimeError::new("can not compare string with object", self.last_position()))
+                }
+            }
 
             _ => Err(RuntimeError::new("unknown operation", self.last_position()))
         }

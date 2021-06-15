@@ -2,7 +2,7 @@ use std::collections::{HashMap, LinkedList};
 
 use crate::intermediate::Position;
 use crate::runtime::assembly_information::{DebugInfo, FileInfo};
-use crate::runtime::object::Object;
+use crate::runtime::object::{Object, Reference, make_reference};
 use crate::runtime::opcode::Instruction;
 use crate::runtime::state::Frame;
 
@@ -28,7 +28,7 @@ pub struct Model {
     pub property_indices: HashMap<String, usize>,
     pub functions: HashMap<String, usize>,
 
-    pub property_names: Vec<String>
+    pub property_names: Vec<Reference<String>>
 }
 
 impl Model {
@@ -46,7 +46,7 @@ impl Model {
         };
 
         self.property_indices.insert(property_name.to_string(), self.property_indices.len());
-        self.property_names.push(property_name.to_string());
+        self.property_names.push(make_reference(property_name.to_string()));
 
         true
     }

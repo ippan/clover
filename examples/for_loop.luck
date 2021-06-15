@@ -20,8 +20,23 @@ function for_break()
     end
 end
 
+model Vector
+    x
+    y
+end
+
+function for_model()
+    local vector = Vector(4, 5)
+
+    for key in vector
+        print(key + ": " + vector[key])
+    end
+
+end
+
 function main()
     for_number()
     for_array()
     for_break()
+    for_model()
 end

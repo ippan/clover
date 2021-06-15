@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn for_loop() {
-        execute("tests/for_loop.luck", &[ "simple", "nests", "break_loop", "array" ]);
+        execute("tests/for_loop.luck", &[ "simple", "nests", "break_loop", "array", "for_model" ]);
     }
 
     #[test]

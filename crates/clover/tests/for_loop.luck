@@ -54,3 +54,22 @@ function array()
 
     sum == 16
 end
+
+model TestModel
+    a
+    b
+    c
+end
+
+function for_model()
+    local test = TestModel(3, 4, 5)
+    local key_combine = ""
+    local sum = 0
+
+    for key in test
+        key_combine += key
+        sum += test[key]
+    end
+
+    key_combine == "abc" and sum == 12
+end
