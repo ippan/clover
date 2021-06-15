@@ -1,17 +1,16 @@
 
-local a
+local a = 0
 
 function in_file()
-    a = 1
     a += 1
 
-    a == 2
+    a == 1
 end
 
 function in_file_again()
     a += 1
 
-    a == 3
+    a == 2
 end
 
 function in_function()

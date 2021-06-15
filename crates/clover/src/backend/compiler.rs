@@ -5,7 +5,7 @@ use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
 use crate::frontend::parser::parse;
 use crate::intermediate::{CompileErrorList, Position, Token, TokenValue};
-use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression, IndexGetExpression, ForStatement};
+use crate::intermediate::ast::{Definition, Document, IncludeDefinition, ModelDefinition, FunctionDefinition, ImplementDefinition, ApplyDefinition, Statement, Expression, IntegerExpression, FloatExpression, StringExpression, BooleanExpression, IdentifierExpression, InfixExpression, CallExpression, InstanceGetExpression, ThisExpression, PrefixExpression, IfExpression, ArrayExpression, IndexGetExpression, ForStatement, LocalDefinition};
 use crate::runtime::object::{Object, make_reference};
 use crate::runtime::opcode::{OpCode, Instruction};
 use crate::runtime::program::{Program, Model, Function};
@@ -499,6 +499,37 @@ impl CompilerState {
         }
     }
 
+    fn compile_local_definition(&mut self, context: &mut CompilerContext, local_definition: &LocalDefinition) {
+        for (i, token) in local_definition.variables.iter().enumerate() {
+            let local_index = self.define_local_by_identifier(context, token);
+
+            if local_index.is_none() {
+                continue;
+            };
+
+            let value = &local_definition.values[i];
+
+            if value.is_none() {
+                continue;
+            };
+
+            let constant_index = match value.clone().unwrap().value {
+                TokenValue::Null => Program::NULL_CONSTANT_INDEX,
+                TokenValue::True => Program::TRUE_CONSTANT_INDEX,
+                TokenValue::False => Program::FALSE_CONSTANT_INDEX,
+                TokenValue::Integer(integer) => context.add_constant(Object::Integer(integer)),
+                TokenValue::Float(float) => context.add_constant(Object::Float(float)),
+                _ => {
+                    self.errors.push_error(&value.clone().unwrap(), "value in local definition can be constant only");
+                    continue;
+                }
+            };
+
+            context.local_values.insert(local_index.unwrap(), constant_index);
+        };
+
+    }
+
     // return model constant index
     fn compile_model_definition(&mut self, context: &mut CompilerContext, model_definition: &ModelDefinition) -> usize {
         let mut model = Model::new();
@@ -640,11 +671,7 @@ impl CompilerState {
 
     fn compile_definition(&mut self, context: &mut CompilerContext, definition: &Definition) {
         match definition {
-            Definition::Local(local_definition) => {
-                for token in local_definition.variables.iter() {
-                    self.define_local_by_identifier(context, token);
-                };
-            },
+            Definition::Local(local_definition) => self.compile_local_definition(context, local_definition),
             Definition::Include(include_definition) => self.compile_include_definition(context, include_definition),
             Definition::Model(model_definition) => { self.compile_model_definition(context, model_definition); },
             Definition::PublicModel(model_definition) => self.compile_public_model_definition(context, model_definition),

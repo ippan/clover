@@ -705,25 +705,43 @@ impl<'a> ParserState<'a> {
         self.expect_and_pop_token(TokenValue::Local);
 
         let mut variables = Vec::new();
+        let mut values = Vec::new();
 
-        if !self.expect_token(TokenValue::Identifier("".to_string())) {
-            return None;
-        }
-        variables.push(self.current_token.clone());
-        self.next_token();
+        let mut last_is_comma = true;
 
-        while self.current_token.value == TokenValue::Comma {
-            self.next_token();
-
+        while last_is_comma {
             if !self.expect_token(TokenValue::Identifier("".to_string())) {
                 return None;
             };
-
             variables.push(self.current_token.clone());
             self.next_token();
+
+            if self.current_token.value == TokenValue::Assign {
+                self.next_token();
+
+                if self.current_token_is_any_of(&[ TokenValue::Null, TokenValue::True, TokenValue::False, TokenValue::Integer(0), TokenValue::Float(0.0), TokenValue::String("".to_string()) ]) {
+                    values.push(Some(self.current_token.clone()));
+                } else {
+                    self.push_error(&self.current_token.clone(), "can use constant value only".to_string());
+                    values.push(None);
+                }
+
+                self.next_token();
+            } else {
+                values.push(None);
+            };
+
+            last_is_comma = self.current_token.value == TokenValue::Comma;
+
+            if last_is_comma {
+                self.next_token();
+            };
         }
 
-        Some(Definition::Local(LocalDefinition { variables }))
+        Some(Definition::Local(LocalDefinition {
+            variables,
+            values
+        }))
     }
 
     fn parse_include_definition(&mut self) -> Option<Definition> {

@@ -62,6 +62,8 @@ Use [Clover VSCode Support](https://github.com/ippan/vscode-clover) for code hig
 
 ## Integrate to your project
 
+### Example
+
 ```rust
 let result = create_state_by_filename("example/main.luck");
 
@@ -71,6 +73,10 @@ match result {
   }
 }
 ```
+
+### Export native function/struct to Clover
+
+see [clover-std](https://github.com/ippan/clover/tree/master/crates/clover-std) 
 
 ## CLI
 

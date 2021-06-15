@@ -142,7 +142,8 @@ pub struct ApplyDefinition {
 
 #[derive(Clone, Debug)]
 pub struct LocalDefinition {
-    pub variables: Vec<Token>
+    pub variables: Vec<Token>,
+    pub values: Vec<Option<Token>>
 }
 
 #[derive(Clone, Debug)]
