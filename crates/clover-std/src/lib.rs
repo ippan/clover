@@ -4,6 +4,7 @@ use clover::runtime::object::make_reference;
 mod io;
 mod random;
 mod math;
+mod helper;
 
 
 pub fn clover_std_inject_to(state: &mut State) {

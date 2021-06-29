@@ -1,11 +1,10 @@
 use clover::runtime::object::Object;
 use clover::runtime::program::RuntimeError;
 use clover::runtime::state::State;
+use crate::helper::expect_parameter_count;
 
 pub fn pow(state: &mut State, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
-    if parameters.len() != 2 {
-        return Err(RuntimeError::new(format!("except 2 parameters, got {}", parameters.len()).as_str(), state.last_position()));
-    };
+    expect_parameter_count(state, parameters, 2)?;
 
     let base_object = parameters[0].clone();
     let exponent_object = parameters[1].clone();
