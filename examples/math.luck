@@ -1,6 +1,6 @@
 
 function main()
-    print(Math.sin(Math.pi))
-    print(Math.cos(Math.pi))
+    print(Math.sin(Math.PI))
+    print(Math.cos(Math.PI))
     print(Math.pow(2, 16))
 end

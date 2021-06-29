@@ -16,7 +16,7 @@ impl NativeModel for Math {
             "sin" => Ok(Object::NativeFunction(trigonometric::sin)),
             "cos" => Ok(Object::NativeFunction(trigonometric::cos)),
 
-            "pi" => Ok(Object::Float(PI)),
+            "PI" => Ok(Object::Float(PI)),
             _ => Ok(Object::Null)
         }
     }
