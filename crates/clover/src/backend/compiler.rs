@@ -179,6 +179,30 @@ pub struct CompilerState {
     pub errors: CompileErrorList
 }
 
+pub trait FileLoader {
+    fn load_file(&self, filename: &str) -> Result<String, CompileErrorList>;
+}
+
+pub struct DefaultFileLoader;
+
+impl FileLoader for DefaultFileLoader {
+    fn load_file(&self, filename: &str) -> Result<String, CompileErrorList> {
+        if let Ok(source) = read_to_string(filename) {
+            Ok(source)
+        } else {
+            let mut errors = CompileErrorList::new(filename);
+            errors.push_error(&Token::new(TokenValue::None, Position::none()), "can not open source file");
+            Err(errors)
+        }
+    }
+}
+
+impl DefaultFileLoader {
+    pub fn new() -> DefaultFileLoader {
+        DefaultFileLoader {}
+    }
+}
+
 impl CompilerState {
     fn define_local(&mut self, context: &mut CompilerContext, name: &str) -> Option<usize> {
         if self.locals.contains_key(name) {
@@ -711,7 +735,7 @@ pub fn compile_document(document: &Document, context: &mut CompilerContext) -> R
     }
 }
 
-pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str) -> Result<(), CompileErrorList> {
+pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str, file_loader: &dyn FileLoader) -> Result<(), CompileErrorList> {
     let mut documents: HashMap<String, Document> = HashMap::new();
 
     let mut dependency_solver = DependencySolver::new();
@@ -725,7 +749,7 @@ pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str) -
     documents.insert(document.filename.clone(), document);
 
     while let Some(dependency_filename) = dependency_solver.get_unsolved_filename() {
-        let dependency_source = load_file(&dependency_filename)?;
+        let dependency_source = file_loader.load_file(&dependency_filename)?;
         let dependency_document = parse(&dependency_source, &dependency_filename)?;
 
         dependency_solver.solve(&dependency_document, &loaded_assemblies);
@@ -751,26 +775,16 @@ pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str) -
     Ok(())
 }
 
-fn load_file(filename: &str) -> Result<String, CompileErrorList> {
-    if let Ok(source) = read_to_string(filename) {
-        Ok(source)
-    } else {
-        let mut errors = CompileErrorList::new(filename);
-        errors.push_error(&Token::new(TokenValue::None, Position::none()), "can not open source file");
-        Err(errors)
-    }
+pub fn compile_file(filename: &str, file_loader: &dyn FileLoader) -> Result<Program, CompileErrorList> {
+    let source = file_loader.load_file(filename)?;
+
+    compile(&source, filename, file_loader)
 }
 
-pub fn compile_file(filename: &str) -> Result<Program, CompileErrorList> {
-    let source = load_file(filename)?;
-
-    compile(&source, filename)
-}
-
-pub fn compile(source: &str, filename: &str) -> Result<Program, CompileErrorList> {
+pub fn compile(source: &str, filename: &str, file_loader: &dyn FileLoader) -> Result<Program, CompileErrorList> {
     let mut context = CompilerContext::new();
 
-    compile_to(&mut context, &source, filename)?;
+    compile_to(&mut context, &source, filename, file_loader)?;
 
     Ok(context.to_program())
 }
