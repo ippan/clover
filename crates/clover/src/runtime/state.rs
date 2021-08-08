@@ -39,8 +39,8 @@ pub struct State {
     program: Program
 }
 
-impl State {
-    pub fn new(program: Program) -> State {
+impl From<Program> for State {
+    fn from(program: Program) -> Self {
         let mut locals = Vec::new();
 
         for i in 0..program.local_count {
@@ -60,7 +60,9 @@ impl State {
             program
         }
     }
+}
 
+impl State {
     pub fn get_program(&self) -> &Program {
         &self.program
     }

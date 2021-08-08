@@ -10,3 +10,4 @@ readme = "README.md"
 description = "A scripting language."
 
 [dependencies]
+byteorder = "1.4.3"

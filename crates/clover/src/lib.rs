@@ -2,6 +2,7 @@ mod frontend;
 mod intermediate;
 mod backend;
 mod runtime;
+mod version;
 
 pub use runtime::program::Program;
 pub use runtime::state::State;
@@ -9,13 +10,13 @@ pub use runtime::object::Object;
 pub use runtime::object::NativeModel;
 pub use runtime::object::NativeModelInstance;
 
-use backend::compiler::DefaultFileLoader;
+use backend::compiler::DefaultStorage;
 use backend::compiler::compile_file;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 pub mod helper {
     pub use crate::runtime::object::make_reference;
-    pub use crate::backend::compiler::FileLoader;
+    pub use crate::backend::compiler::Storage;
 }
 
 pub mod debug {
@@ -25,34 +26,49 @@ pub mod debug {
 }
 
 pub struct Clover {
-    file_loader: Box<dyn helper::FileLoader>
+    storage: Box<dyn helper::Storage>
 }
 
 impl Clover {
-    pub fn new_with_file_loader(file_loader: Box<dyn helper::FileLoader>) -> Clover {
+    pub fn new_with_file_loader(storage: Box<dyn helper::Storage>) -> Clover {
         Clover {
-            file_loader
+            storage
         }
     }
 
     pub fn new() -> Clover {
         Clover {
-            file_loader: Box::new(DefaultFileLoader::new())
+            storage: Box::new(DefaultStorage::new())
         }
     }
 
     pub fn compile_file(&self, filename: &str) -> Result<Program, debug::CompileErrorList> {
-        compile_file(filename, self.file_loader.deref())
+        compile_file(filename, self.storage.deref())
+    }
+
+    pub fn save_program(&self, filename: &str, program: &Program) -> Result<(), debug::CompileErrorList> {
+
+        let mut writer = self.storage.get_writer(filename)?;
+
+        program.serialize(writer.deref_mut()).unwrap();
+
+        Ok(())
+    }
+
+    pub fn load_program(&self, filename: &str) -> Result<Program, debug::CompileErrorList> {
+        let mut reader = self.storage.get_reader(filename)?;
+
+        Ok(Program::deserialize(&mut reader).unwrap())
     }
 
     pub fn create_state_by_filename(&self, filename: &str) -> Result<State, debug::CompileErrorList> {
         let program = self.compile_file(filename)?;
 
-        Ok(State::new(program))
+        Ok(program.into())
     }
 
     pub fn run(&self, program: Program) -> Result<Object, debug::RuntimeError> {
-        let mut state = State::new(program);
+        let mut state: State = program.into();
 
         state.execute()
     }

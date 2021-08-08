@@ -72,10 +72,17 @@ pub enum OpCode {
     Unknown         = 0xFF,
 }
 
-impl Instruction {
-    pub fn form(instruction: u64) -> Instruction {
+impl From<u64> for Instruction {
+    fn from(instruction: u64) -> Instruction {
         Instruction(instruction)
     }
+}
+
+impl Into<u64> for &Instruction {
+    fn into(self) -> u64 { self.0 }
+}
+
+impl Instruction {
 
     pub fn opcode(&self) -> OpCode {
         match (self.0 >> 56) & 0xFF {

@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::read_to_string;
+use std::fs::{read_to_string, File};
 
 use crate::backend::dependency_solver::DependencySolver;
 use crate::backend::function_state::{Scope, FunctionState};
@@ -13,6 +13,7 @@ use crate::backend::assembly_state::AssemblyState;
 use crate::runtime::assembly_information::{FileInfo, DebugInfo};
 use crate::runtime::opcode::{OPERATION_ADD, OPERATION_SUB, OPERATION_MULTIPLY, OPERATION_DIVIDE, OPERATION_MOD, OPERATION_EQUAL, OPERATION_GREATER, OPERATION_LESS, OPERATION_GREATER_EQUAL, OPERATION_LESS_EQUAL, OPERATION_AND, OPERATION_OR};
 use std::ops::Deref;
+use std::io::{Read, Write, BufReader, BufWriter};
 
 #[derive(Debug)]
 pub struct CompilerContext {
@@ -179,13 +180,18 @@ pub struct CompilerState {
     pub errors: CompileErrorList
 }
 
-pub trait FileLoader {
+pub trait Storage {
     fn load_file(&self, filename: &str) -> Result<String, CompileErrorList>;
+
+    fn get_reader(&self, filename: &str) -> Result<Box<dyn Read>, CompileErrorList>;
+
+    fn get_writer(&self, filename: &str) -> Result<Box<dyn Write>, CompileErrorList>;
+
 }
 
-pub struct DefaultFileLoader;
+pub struct DefaultStorage;
 
-impl FileLoader for DefaultFileLoader {
+impl Storage for DefaultStorage {
     fn load_file(&self, filename: &str) -> Result<String, CompileErrorList> {
         if let Ok(source) = read_to_string(filename) {
             Ok(source)
@@ -195,11 +201,31 @@ impl FileLoader for DefaultFileLoader {
             Err(errors)
         }
     }
+
+    fn get_reader(&self, filename: &str) -> Result<Box<dyn Read>, CompileErrorList> {
+        if let Ok(file) = File::open(filename) {
+            Ok(Box::new(BufReader::new(file)))
+        } else {
+            let mut errors = CompileErrorList::new(filename);
+            errors.push_error(&Token::new(TokenValue::None, Position::none()), "can not open source file");
+            Err(errors)
+        }
+    }
+
+    fn get_writer(&self, filename: &str) -> Result<Box<dyn Write>, CompileErrorList> {
+        if let Ok(file) = File::create(filename) {
+            Ok(Box::new(BufWriter::new(file)))
+        } else {
+            let mut errors = CompileErrorList::new(filename);
+            errors.push_error(&Token::new(TokenValue::None, Position::none()), "can not open source file");
+            Err(errors)
+        }
+    }
 }
 
-impl DefaultFileLoader {
-    pub fn new() -> DefaultFileLoader {
-        DefaultFileLoader {}
+impl DefaultStorage {
+    pub fn new() -> DefaultStorage {
+        DefaultStorage {}
     }
 }
 
@@ -735,7 +761,7 @@ pub fn compile_document(document: &Document, context: &mut CompilerContext) -> R
     }
 }
 
-pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str, file_loader: &dyn FileLoader) -> Result<(), CompileErrorList> {
+pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str, file_loader: &dyn Storage) -> Result<(), CompileErrorList> {
     let mut documents: HashMap<String, Document> = HashMap::new();
 
     let mut dependency_solver = DependencySolver::new();
@@ -775,13 +801,13 @@ pub fn compile_to(context: &mut CompilerContext, source: &str, filename: &str, f
     Ok(())
 }
 
-pub fn compile_file(filename: &str, file_loader: &dyn FileLoader) -> Result<Program, CompileErrorList> {
+pub fn compile_file(filename: &str, file_loader: &dyn Storage) -> Result<Program, CompileErrorList> {
     let source = file_loader.load_file(filename)?;
 
     compile(&source, filename, file_loader)
 }
 
-pub fn compile(source: &str, filename: &str, file_loader: &dyn FileLoader) -> Result<Program, CompileErrorList> {
+pub fn compile(source: &str, filename: &str, file_loader: &dyn Storage) -> Result<Program, CompileErrorList> {
     let mut context = CompilerContext::new();
 
     compile_to(&mut context, &source, filename, file_loader)?;
