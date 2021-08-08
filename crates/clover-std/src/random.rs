@@ -1,8 +1,7 @@
-use clover::runtime::state::State;
-use clover::runtime::object::{Object, NativeModel, NativeModelInstance, make_reference};
-use clover::runtime::program::RuntimeError;
+use clover::{State, Object, NativeModel, NativeModelInstance};
+use clover::helper::make_reference;
+use clover::debug::{ RuntimeError, Position };
 use rand::rngs::ThreadRng;
-use clover::intermediate::Position;
 use rand::Rng;
 
 pub struct Random;

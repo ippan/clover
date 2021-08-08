@@ -1,7 +1,64 @@
-pub mod frontend;
-pub mod intermediate;
-pub mod backend;
-pub mod runtime;
+mod frontend;
+mod intermediate;
+mod backend;
+mod runtime;
+
+pub use runtime::program::Program;
+pub use runtime::state::State;
+pub use runtime::object::Object;
+pub use runtime::object::NativeModel;
+pub use runtime::object::NativeModelInstance;
+
+use backend::compiler::DefaultFileLoader;
+use backend::compiler::compile_file;
+use std::ops::Deref;
+
+pub mod helper {
+    pub use crate::runtime::object::make_reference;
+    pub use crate::backend::compiler::FileLoader;
+}
+
+pub mod debug {
+    pub use crate::intermediate::CompileErrorList;
+    pub use crate::runtime::program::RuntimeError;
+    pub use crate::intermediate::Position;
+}
+
+pub struct Clover {
+    file_loader: Box<dyn helper::FileLoader>
+}
+
+impl Clover {
+    pub fn new_with_file_loader(file_loader: Box<dyn helper::FileLoader>) -> Clover {
+        Clover {
+            file_loader
+        }
+    }
+
+    pub fn new() -> Clover {
+        Clover {
+            file_loader: Box::new(DefaultFileLoader::new())
+        }
+    }
+
+    pub fn compile_file(&self, filename: &str) -> Result<Program, debug::CompileErrorList> {
+        compile_file(filename, self.file_loader.deref())
+    }
+
+    pub fn create_state_by_filename(&self, filename: &str) -> Result<State, debug::CompileErrorList> {
+        let program = self.compile_file(filename)?;
+
+        Ok(State::new(program))
+    }
+
+    pub fn run(&self, program: Program) -> Result<Object, debug::RuntimeError> {
+        let mut state = State::new(program);
+
+        state.execute()
+    }
+
+}
+
 
 #[cfg(test)]
 mod tests {

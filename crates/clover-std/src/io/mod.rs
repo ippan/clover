@@ -1,6 +1,6 @@
-use clover::runtime::state::State;
-use clover::runtime::object::{Object, NativeModel, make_reference};
-use clover::runtime::program::RuntimeError;
+use clover::{State, Object, NativeModel};
+use clover::debug::RuntimeError;
+use clover::helper::make_reference;
 
 pub struct IO;
 

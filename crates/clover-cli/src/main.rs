@@ -1,4 +1,4 @@
-use clover::runtime::create_state_by_filename;
+use clover::Clover;
 use clover_std::clover_std_inject_to;
 use std::env;
 
@@ -10,9 +10,11 @@ fn main() {
         return;
     };
 
+    let clover = Clover::new();
+
     let filename = &args[1];
 
-    let result = create_state_by_filename(filename.as_str());
+    let result = clover.create_state_by_filename(filename.as_str());
 
     match result {
         Ok(mut state) => {

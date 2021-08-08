@@ -1,5 +1,5 @@
-use clover::runtime::object::{NativeModel, Object};
-use clover::runtime::program::RuntimeError;
+use clover::{NativeModel, Object};
+use clover::debug::RuntimeError;
 use std::f64::consts::PI;
 
 mod pow;

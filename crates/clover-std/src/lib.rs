@@ -1,5 +1,5 @@
-use clover::runtime::state::State;
-use clover::runtime::object::make_reference;
+use clover::State;
+use clover::helper::make_reference;
 
 mod io;
 mod random;

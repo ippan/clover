@@ -1,6 +1,5 @@
-use clover::runtime::state::State;
-use clover::runtime::object::Object;
-use clover::runtime::program::RuntimeError;
+use clover::{State, Object};
+use clover::debug::RuntimeError;
 use crate::helper::{expect_parameter_count, expect_float};
 
 pub fn sin(state: &mut State, parameters: &[ Object ]) -> Result<Object, RuntimeError> {

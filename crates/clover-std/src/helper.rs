@@ -1,6 +1,5 @@
-use clover::runtime::object::Object;
-use clover::runtime::program::RuntimeError;
-use clover::runtime::state::State;
+use clover::{State, Object};
+use clover::debug::RuntimeError;
 
 pub fn expect_parameter_count(state: &State, parameters: &[ Object ], count: usize) -> Result<(), RuntimeError> {
     if parameters.len() != count {

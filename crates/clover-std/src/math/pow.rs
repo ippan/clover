@@ -1,6 +1,5 @@
-use clover::runtime::object::Object;
-use clover::runtime::program::RuntimeError;
-use clover::runtime::state::State;
+use clover::{State, Object};
+use clover::debug::RuntimeError;
 use crate::helper::expect_parameter_count;
 
 pub fn pow(state: &mut State, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
