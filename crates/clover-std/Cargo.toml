@@ -10,5 +10,5 @@ readme = "README.md"
 description = "A scripting language."
 
 [dependencies]
-clover = { path = "../clover", version = "0.1.0" }
+clover = { path = "../clover", version = "0.1.2" }
 rand = "0.8.3"

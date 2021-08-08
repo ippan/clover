@@ -13,5 +13,5 @@ name = "clover"
 path = "src/main.rs"
 
 [dependencies]
-clover = { path = "../clover", version = "0.1.0" }
-clover-std = { path = "../clover-std", version = "0.1.0" }
+clover = { path = "../clover", version = "0.1.2" }
+clover-std = { path = "../clover-std", version = "0.1.2" }
