@@ -62,9 +62,7 @@ impl Clover {
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime::state::State;
-    use crate::runtime::create_state_by_filename;
-    use crate::runtime::object::Object;
+    use crate::{Clover, State, Object};
 
     fn execute_function(state: &mut State, function_name: &str) {
         let mut function_index = None;
@@ -94,7 +92,9 @@ mod tests {
     }
 
     fn execute(filename: &str, function_names: &[ &str ]) {
-        let result = create_state_by_filename(filename);
+        let clover = Clover::new();
+
+        let result = clover.create_state_by_filename(filename);
 
         assert!(result.is_ok(), "create state with with file [{}]", filename);
 
