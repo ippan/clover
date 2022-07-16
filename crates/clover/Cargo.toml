@@ -1,6 +1,6 @@
 [package]
 name = "clover"
-version = "0.1.2"
+version = "0.1.3"
 authors = [ "PanPan <ippan829@gmail.com>" ]
 license = "MIT"
 edition = "2021"

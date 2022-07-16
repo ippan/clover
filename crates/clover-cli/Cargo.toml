@@ -1,6 +1,6 @@
 [package]
 name = "clover-cli"
-version = "0.1.2"
+version = "0.1.3"
 authors = [ "PanPan <ippan829@gmail.com>" ]
 license = "MIT"
 edition = "2021"
@@ -13,5 +13,6 @@ name = "clover"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "3.2.12", features = ["derive"] }
 clover = { path = "../clover", version = "0.1.2" }
 clover-std = { path = "../clover-std", version = "0.1.2" }
