@@ -1,7 +1,8 @@
-use clover::{State, Object, NativeModel, NativeModelInstance};
-use clover::helper::make_reference;
-use clover::debug::{ RuntimeError, Position };
+use clover::runtime::state::State;
+use clover::runtime::object::{Object, NativeModel, NativeModelInstance, make_reference, Reference};
+use clover::runtime::program::RuntimeError;
 use rand::rngs::ThreadRng;
+use clover::intermediate::Position;
 use rand::Rng;
 
 pub struct Random;
@@ -30,26 +31,26 @@ pub struct RandomInstance {
 }
 
 impl NativeModelInstance for RandomInstance {
-    fn index_get(&self, _index: &Object) -> Result<Object, RuntimeError> {
+    fn index_get(&self, _this: Reference<dyn NativeModelInstance>, _index: &Object) -> Result<Object, RuntimeError> {
         Ok(Object::Null)
     }
 
-    fn index_set(&mut self, _index: &Object, _value: Object) -> Result<(), RuntimeError> {
+    fn index_set(&mut self, _this: Reference<dyn NativeModelInstance>, _index: &Object, _value: Object) -> Result<(), RuntimeError> {
         Ok(())
     }
 
-    fn instance_get(&self, key: &str) -> Result<Object, RuntimeError> {
+    fn instance_get(&self, this: Reference<dyn NativeModelInstance>, key: &str) -> Result<Object, RuntimeError> {
         match key {
-            "next_integer" | "next_float" | "within" | "pick" => Ok(Object::EmptyInstanceNativeFunction(key.to_string())),
+            "next_integer" | "next_float" | "within" | "pick" => Ok(Object::InstanceNativeFunction(this, key.to_string())),
             _ => Err(RuntimeError::new("index does not exists", Position::none()))
         }
     }
 
-    fn instance_set(&mut self, _key: &str, _value: Object) -> Result<(), RuntimeError> {
+    fn instance_set(&mut self, _this: Reference<dyn NativeModelInstance>, _key: &str, _value: Object) -> Result<(), RuntimeError> {
         Ok(())
     }
 
-    fn call(&mut self, state: &mut State, key: &str, parameters: &[Object]) -> Result<Object, RuntimeError> {
+    fn call(&mut self, _this: Reference<dyn NativeModelInstance>, state: &mut State, key: &str, parameters: &[Object]) -> Result<Object, RuntimeError> {
         match key {
             "next_integer" => self.next_integer(state, parameters),
             "next_float" => self.next_float(state, parameters),

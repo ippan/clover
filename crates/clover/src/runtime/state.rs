@@ -225,18 +225,10 @@ impl State {
     }
 
     fn call_instance_native_function(&mut self, instance: Reference<dyn NativeModelInstance>, function_name: &str, parameters: &[ Object ]) -> Result<(), RuntimeError> {
-        let result = instance.borrow_mut().call(self, function_name, parameters)?;
-
-        self.push(State::process_native_instance_result(instance, result));
-
+        let instance_copy = instance.clone();
+        let result = instance.borrow_mut().call(instance_copy, self, function_name, parameters)?;
+        self.push(result);
         Ok(())
-    }
-
-    fn process_native_instance_result(instance: Reference<dyn NativeModelInstance>, result: Object) -> Object {
-        match &result {
-            Object::EmptyInstanceNativeFunction(function_name) => Object::InstanceNativeFunction(instance, function_name.clone()),
-            _ => result
-        }
     }
 
     fn call_object(&mut self, object: Object, parameters: &[ Object ]) -> Result<(), RuntimeError> {
@@ -303,10 +295,9 @@ impl State {
     }
 
     fn instance_get_native_instance(&mut self, instance: Reference<dyn NativeModelInstance>, key: &str) -> Result<(), RuntimeError> {
-        let result = instance.borrow().instance_get(key)?;
-
-        self.push(State::process_native_instance_result(instance, result));
-
+        let instance_copy = instance.clone();
+        let result = instance.borrow().instance_get(instance_copy, key)?;
+        self.push(result);
         Ok(())
     }
 
@@ -421,7 +412,10 @@ impl State {
 
         match instance {
             Object::Instance(model_instance) => self.index_set_model_instance(model_instance, &index)?,
-            Object::NativeInstance(instance) => instance.borrow_mut().instance_set(index.as_reference_string().borrow().deref(), self.top())?,
+            Object::NativeInstance(instance) => {
+                let instance_copy = instance.clone();
+                instance.borrow_mut().instance_set(instance_copy, index.as_reference_string().borrow().deref(), self.top())?
+            },
             _ => {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
             }
@@ -478,7 +472,10 @@ impl State {
 
         match instance {
             Object::Instance(model_instance) => self.index_set_model_instance(model_instance, &index)?,
-            Object::NativeInstance(instance) => instance.borrow_mut().index_set(&index, self.top())?,
+            Object::NativeInstance(instance) => {
+                let instance_copy = instance.clone();
+                instance.borrow_mut().index_set(instance_copy, &index, self.top())?
+            },
             Object::Array(array) => self.index_set_array(array, &index)?,
             _ => {
                 return Err(RuntimeError::new("this object's instance set did not implemented yet", self.last_position()));
