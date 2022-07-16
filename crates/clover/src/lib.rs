@@ -9,6 +9,7 @@ pub use runtime::state::State;
 pub use runtime::object::Object;
 pub use runtime::object::NativeModel;
 pub use runtime::object::NativeModelInstance;
+pub use runtime::object::Reference;
 
 use backend::compiler::DefaultStorage;
 use backend::compiler::compile_file;
