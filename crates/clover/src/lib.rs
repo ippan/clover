@@ -101,10 +101,10 @@ mod tests {
 
         let object = result.unwrap();
 
-        if let Object::Boolean(value) = object{
-            assert!(value, "result is not bool when executing function [{}] in [{}]", function_name, &state.get_program().file_info.as_ref().unwrap().filenames[0]);
+        if let Object::Boolean(value) = object {
+            assert!(value, "result is not true when executing function [{}] in [{}]", function_name, &state.get_program().file_info.as_ref().unwrap().filenames[0]);
         } else {
-            panic!("result is not bool when executing function [{}] in [{}]", function_name, &state.get_program().file_info.as_ref().unwrap().filenames[0]);
+            panic!("result is not a boolean value when executing function [{}] in [{}]", function_name, &state.get_program().file_info.as_ref().unwrap().filenames[0]);
         };
     }
 

@@ -119,6 +119,26 @@ impl State {
         Position::none()
     }
 
+    fn execute_until_frame_size_equal(&mut self, frame_size: usize) -> Result<Object, RuntimeError> {
+        while self.frames.len() != frame_size {
+            self.step()?;
+        };
+
+        if let Some(object) = self.pop() {
+            Ok(object)
+        } else {
+            Err(RuntimeError::new("there is no result", Position::none()))
+        }
+    }
+
+    pub fn execute_by_object(&mut self, object: Object, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
+        let frame_size = self.frames.len();
+
+        self.call_object(object, parameters)?;
+
+        self.execute_until_frame_size_equal(frame_size)
+    }
+
     pub fn execute_by_function_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
         if self.program.functions.len() <= function_index {
             return Err(RuntimeError::new("can not found function", Position::none()));
@@ -130,17 +150,11 @@ impl State {
             return Err(RuntimeError::new("too many parameters", Position::none()));
         };
 
+        let frame_size = self.frames.len();
+
         self.call_function_by_index(function_index, parameters)?;
 
-        while !self.frames.is_empty() {
-            self.step()?;
-        };
-
-        if let Some(object) = self.pop() {
-            Ok(object)
-        } else {
-            Err(RuntimeError::new("there is no result", Position::none()))
-        }
+        self.execute_until_frame_size_equal(frame_size)
     }
 
     pub fn execute(&mut self) -> Result<Object, RuntimeError> {
