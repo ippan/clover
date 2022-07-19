@@ -124,11 +124,7 @@ impl State {
             self.step()?;
         };
 
-        if let Some(object) = self.pop() {
-            Ok(object)
-        } else {
-            Err(RuntimeError::new("there is no result", Position::none()))
-        }
+        self.get_top()
     }
 
     pub fn execute_by_object(&mut self, object: Object, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
@@ -137,6 +133,22 @@ impl State {
         self.call_object(object, parameters)?;
 
         self.execute_until_frame_size_equal(frame_size)
+    }
+
+    pub fn get_object_property_by_name(&mut self, object: Object, name: &str) -> Result<Object, RuntimeError> {
+        let name_index = Object::String(make_reference(name.to_string()));
+
+        self.instance_get_with_index(object, &name_index)?;
+
+        self.get_top()
+    }
+
+    pub fn get_object_property_by_index(&mut self, object: Object, index: i64) -> Result<Object, RuntimeError> {
+        let number_index = Object::Integer(index);
+
+        self.instance_get_with_index(object, &number_index)?;
+
+        self.get_top()
     }
 
     pub fn execute_by_function_index(&mut self, function_index: usize, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
@@ -212,6 +224,14 @@ impl State {
 }
 
 impl State {
+    fn get_top(&mut self) -> Result<Object, RuntimeError> {
+        if let Some(object) = self.pop() {
+            Ok(object)
+        } else {
+            Err(RuntimeError::new("there is no result", Position::none()))
+        }
+    }
+
     fn call_model_by_index(&mut self, model_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
         let model = self.program.models.get(model_index).unwrap();
         if parameters.len() > model.property_indices.len() {
@@ -315,14 +335,10 @@ impl State {
         Ok(())
     }
 
-    fn instance_get(&mut self) -> Result<(), RuntimeError> {
-        let index = self.pop().unwrap();
-        let instance = self.pop().unwrap();
-
+    fn instance_get_with_index(&mut self, instance: Object, index: &Object) -> Result<(), RuntimeError> {
         match instance {
-
-            Object::Model(model_index) => self.index_get_model(model_index, &index)?,
-            Object::Instance(model_instance) => self.index_get_model_instance(model_instance, &index)?,
+            Object::Model(model_index) => self.index_get_model(model_index, index)?,
+            Object::Instance(model_instance) => self.index_get_model_instance(model_instance, index)?,
             Object::NativeModel(model_index) => self.instance_get_native_model(model_index, index.as_reference_string().borrow().deref())?,
             Object::NativeInstance(instance) => self.instance_get_native_instance(instance, index.as_reference_string().borrow().deref())?,
 
@@ -337,6 +353,13 @@ impl State {
         };
 
         Ok(())
+    }
+
+    fn instance_get(&mut self) -> Result<(), RuntimeError> {
+        let index = self.pop().unwrap();
+        let instance = self.pop().unwrap();
+
+        self.instance_get_with_index(instance, &index)
     }
 
     // index get for model
