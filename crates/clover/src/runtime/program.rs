@@ -1,4 +1,6 @@
 use std::collections::{HashMap, LinkedList};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 use crate::intermediate::Position;
 use crate::runtime::assembly_information::{DebugInfo, FileInfo};
@@ -24,6 +26,15 @@ impl RuntimeError {
         }
     }
 }
+
+impl Display for RuntimeError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter.write_fmt(format_args!("at ({}, {}) - {}", self.position.line, self.position.column, self.message))
+        // TODO : add print call stack
+    }
+}
+
+impl Error for RuntimeError {}
 
 #[derive(Debug, Clone)]
 pub struct Model {

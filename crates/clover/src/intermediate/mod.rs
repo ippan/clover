@@ -1,3 +1,6 @@
+use std::error::Error;
+use std::fmt::{Display, Formatter};
+
 pub mod ast;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -136,6 +139,14 @@ pub struct CompileError {
     pub message: String
 }
 
+impl Display for CompileError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter.write_fmt(format_args!("at ({}, {}) near {} - {}", self.token.position.line, self.token.position.column, self.token.value.to_string(), self.message))
+    }
+}
+
+impl Error for CompileError {}
+
 #[derive(Clone, Debug)]
 pub struct CompileErrorList {
     pub filename: String,
@@ -165,3 +176,11 @@ impl CompileErrorList {
         self.errors.is_empty()
     }
 }
+
+impl Display for CompileErrorList {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter.debug_list().entries(self.errors.iter()).finish()
+    }
+}
+
+impl Error for CompileErrorList {}

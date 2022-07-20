@@ -31,6 +31,11 @@ pub trait NativeModelInstance {
     fn instance_set(&mut self, this: Reference<dyn NativeModelInstance>, key: &str, value: Object) -> Result<(), RuntimeError>;
 
     fn call(&mut self, this: Reference<dyn NativeModelInstance>, state: &mut State, key: &str, parameters: &[Object]) ->Result<Object, RuntimeError>;
+
+    fn raw_get_integer(&mut self, _key: &str) -> Option<u64> { None }
+    fn raw_get_float(&mut self, _key: &str) -> Option<f64> { None }
+    fn raw_get_boolean(&mut self, _key: &str) -> Option<bool> { None }
+    fn raw_get_byte_array(&mut self, _key: &str) -> Option<&[u8]> { None }
 }
 
 pub enum Object {

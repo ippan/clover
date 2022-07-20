@@ -132,7 +132,7 @@ impl FunctionState {
 
     pub fn enter_break_scope(&mut self) { self.break_scopes.push(BreakScope::new()); }
 
-    pub fn exit_break_scrope(&mut self) {
+    pub fn exit_break_scope(&mut self) {
         let break_scope = self.break_scopes.pop().unwrap();
         let jump_target = self.get_next_instruction_index() as u64;
 

@@ -497,7 +497,7 @@ impl CompilerState {
 
         function_state.replace_instruction(jump_to_end_if_true_instruction_index, OpCode::JumpIf.to_instruction(end_position as u64));
 
-        function_state.exit_break_scrope();
+        function_state.exit_break_scope();
         function_state.exit_scope();
 
     }

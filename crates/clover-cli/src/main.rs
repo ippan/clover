@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fs::File;
 use std::process::exit;
 use clover::{Clover, Program, State};
@@ -21,7 +22,7 @@ struct Args {
 }
 
 
-fn main() -> Result<(), std::io::Error> {
+fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     let clover = Clover::new();
@@ -38,12 +39,7 @@ fn main() -> Result<(), std::io::Error> {
         let mut file = File::open(filename)?;
         Program::deserialize(&mut file)?
     } else {
-        if let Ok(program) = clover.compile_file(filename.as_str()) {
-            program
-        } else {
-            // TODO : handler error
-            exit(-1);
-        }
+        clover.compile_file(filename.as_str())?
     };
 
     if args.compile {
@@ -58,9 +54,7 @@ fn main() -> Result<(), std::io::Error> {
 
         clover_std_inject_to(&mut state);
 
-        if let Err(error) = state.execute() {
-            println!("{:?}", error);
-        };
+        state.execute()?;
     }
 
     Ok(())
