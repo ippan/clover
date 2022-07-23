@@ -3,7 +3,7 @@ use clover::debug::RuntimeError;
 
 pub fn expect_parameter_count(state: &State, parameters: &[ Object ], count: usize) -> Result<(), RuntimeError> {
     if parameters.len() != count {
-        return Err(RuntimeError::new(format!("except {} parameters, got {}", count, parameters.len()).as_str(), state.last_position()));
+        return Err(RuntimeError::new(&format!("except {} parameters, got {}", count, parameters.len()), state.last_position()));
     };
 
     Ok(())

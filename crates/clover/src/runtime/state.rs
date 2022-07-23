@@ -252,6 +252,16 @@ impl State {
         Ok(())
     }
 
+    fn call_native_model_by_index(&mut self, model_index: usize, parameters: &[ Object ]) -> Result<(), RuntimeError> {
+        let native_model = self.native_models.get(model_index).unwrap().clone();
+
+        let result = native_model.borrow_mut().call(self, parameters)?;
+
+        self.push(result);
+
+        Ok(())
+    }
+
     fn call_native_function(&mut self, function: NativeFunction, parameters: &[ Object ]) -> Result<(), RuntimeError> {
             let result = function(self, parameters)?;
             self.push(result);
@@ -271,6 +281,7 @@ impl State {
             Object::InstanceFunction(model, function_index) => self.call_function_by_index(function_index,&make_instance_call_parameters(model.deref().clone(), parameters)),
             Object::NativeFunction(function) => self.call_native_function(function, parameters),
             Object::InstanceNativeFunction(instance, function_name) => self.call_instance_native_function(instance, &function_name, parameters),
+            Object::NativeModel(model_index) => self.call_native_model_by_index(model_index, parameters),
             Object::Model(model_index) => self.call_model_by_index(model_index, parameters),
             _ => Err(RuntimeError::new(&format!("can not call {:?}", object), self.last_position()))
         }
@@ -435,6 +446,10 @@ impl State {
             Object::Model(model_index) => self.index_get_model(model_index, &index)?,
             Object::Instance(model_instance) => self.index_get_model_instance(model_instance, &index)?,
             Object::Array(array) => self.index_get_array(array, &index)?,
+            Object::NativeInstance(instance) => {
+                let instance_copy = instance.clone();
+                self.push(instance.borrow_mut().index_get(instance_copy, &index)?);
+            }
             _ => {
                 return Err(RuntimeError::new("this object's instance get did not implemented yet", self.last_position()));
             }

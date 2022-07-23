@@ -4,6 +4,7 @@ use std::rc::Rc;
 use crate::runtime::state::State;
 use crate::runtime::program::RuntimeError;
 use std::ops::Deref;
+use crate::debug::Position;
 
 pub type Reference<T> = Rc<RefCell<T>>;
 
@@ -20,8 +21,10 @@ pub struct ModelInstance {
 }
 
 pub trait NativeModel {
-    // direct call to model
-    fn model_get(&self, key: &str) -> Result<Object, RuntimeError>;
+    // model constructor
+    fn call(&mut self, state: &mut State, _parameters: &[Object]) -> Result<Object, RuntimeError> { Err(RuntimeError::new("this native model do not have constructor", state.last_position())) }
+
+    fn model_get(&self, key: &str) -> Result<Object, RuntimeError> { Err(RuntimeError::new(&format!("this native do not have property [{}]", key), Position::none())) }
 }
 
 pub trait NativeModelInstance {

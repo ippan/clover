@@ -7,11 +7,8 @@ use clover::helper::make_reference;
 pub struct Random;
 
 impl NativeModel for Random {
-    fn model_get(&self, key: &str) -> Result<Object, RuntimeError> {
-        match key {
-            "new" => Ok(Object::NativeFunction(Random::new_random)),
-            _ => Ok(Object::Null)
-        }
+    fn call(&mut self, state: &mut State, parameters: &[Object]) -> Result<Object, RuntimeError> {
+        Random::new_random(state, parameters)
     }
 }
 
