@@ -156,4 +156,9 @@ mod tests {
     fn local() {
         execute("tests/local.luck", &[ "in_file", "in_file_again", "in_function", "in_scope" ]);
     }
+
+    #[test]
+    fn convert() {
+        execute("tests/convert.luck", &[ "string_to_integer", "string_to_float", "integer_to_string", "integer_to_float", "float_to_string", "float_to_integer" ]);
+    }
 }

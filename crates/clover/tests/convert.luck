@@ -1,0 +1,23 @@
+function string_to_integer()
+    "100".integer == 100
+end
+
+function string_to_float()
+    "1.0".float == 1.0
+end
+
+function integer_to_string()
+    100.string == "100"
+end
+
+function integer_to_float()
+    1.float == 1.0
+end
+
+function float_to_string()
+    1.0.string == "1"
+end
+
+function float_to_integer()
+    1.0.integer == 1
+end

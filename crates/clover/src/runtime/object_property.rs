@@ -49,6 +49,7 @@ pub fn instance_get_string(state: &mut State, value: Reference<String>, key: &st
                 Object::Null
             }
         },
+        "length" => Object::Integer(value.borrow().len() as i64),
         _ => { return Err(RuntimeError::new("unknown property", state.last_position())); }
     };
 
