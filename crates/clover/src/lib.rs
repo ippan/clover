@@ -18,6 +18,8 @@ use std::ops::{Deref, DerefMut};
 pub mod helper {
     pub use crate::runtime::object::make_reference;
     pub use crate::backend::compiler::Storage;
+
+    pub use crate::runtime::object::ensure_parameters_length;
 }
 
 pub mod debug {

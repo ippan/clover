@@ -35,10 +35,18 @@ pub trait NativeModelInstance {
 
     fn call(&mut self, this: Reference<dyn NativeModelInstance>, state: &mut State, key: &str, parameters: &[Object]) ->Result<Object, RuntimeError>;
 
-    fn raw_get_integer(&mut self, _key: &str) -> Option<u64> { None }
-    fn raw_get_float(&mut self, _key: &str) -> Option<f64> { None }
-    fn raw_get_boolean(&mut self, _key: &str) -> Option<bool> { None }
-    fn raw_get_byte_array(&mut self, _key: &str) -> Option<&[u8]> { None }
+    fn raw_get_integer(&self, _key: &str) -> Option<i64> { None }
+    fn raw_get_float(&self, _key: &str) -> Option<f64> { None }
+    fn raw_get_boolean(&self, _key: &str) -> Option<bool> { None }
+    fn raw_get_byte_array(&self, _key: &str) -> Option<&[u8]> { None }
+}
+
+pub fn ensure_parameters_length(parameters: &[Object], length: usize) -> Result<(), RuntimeError> {
+    if parameters.len() == length {
+        Ok(())
+    } else {
+        Err(RuntimeError::new(&format!("need {} parameters, got {}", length, parameters.len()), Position::none()))
+    }
 }
 
 pub enum Object {
@@ -125,6 +133,41 @@ impl Object {
     }
 
     pub fn is_null(&self) -> bool { matches!(self, Object::Null) }
+
+    pub fn integer_value(&self) -> Result<i64, RuntimeError> {
+        if let Object::Integer(value) = self {
+            Ok(*value)
+        } else {
+            Err(RuntimeError::new("value is not a integer", Position::none()))
+        }
+    }
+
+    pub fn float_value(&self) -> Result<f64, RuntimeError> {
+        if let Object::Float(value) = self {
+            Ok(*value)
+        } else if let Object::Integer(value) = self {
+            Ok(*value as f64)
+        } else {
+            Err(RuntimeError::new("value is not a float", Position::none()))
+        }
+    }
+
+    pub fn string_value(&self) -> Result<String, RuntimeError> {
+        if let Object::String(value) = self {
+            Ok(value.borrow().deref().clone())
+        } else {
+            Err(RuntimeError::new("value is not a string", Position::none()))
+        }
+    }
+
+    pub fn native_instance_value(&self) -> Result<Reference<dyn NativeModelInstance>, RuntimeError> {
+        if let Object::NativeInstance(instance) = self {
+            Ok(instance.clone())
+        } else {
+            Err(RuntimeError::new("value is not a native instance", Position::none()))
+        }
+    }
+
 }
 
 fn objects_to_string(objects: &Vec<Object>) -> String {
