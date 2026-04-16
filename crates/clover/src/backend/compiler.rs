@@ -465,12 +465,12 @@ impl CompilerState {
 
         // prepare the enumerable object to local
         self.compile_expression(context, function_state, &for_statement.enumerable);
-        function_state.emit(OpCode::LocalSet.to_instruction(enumerable_local_index as u64), function_state.get_last_position());
+        function_state.emit(OpCode::LocalSet.to_instruction(enumerable_local_index as u64), for_statement.token.position);
         function_state.emit_opcode_without_position(OpCode::Pop);
 
         // prepare the iterator to local
-        function_state.emit(OpCode::PushConstant.to_instruction(context.add_constant(Object::Integer(0)) as u64), function_state.get_last_position());
-        function_state.emit(OpCode::LocalSet.to_instruction(iterator_local_index as u64), function_state.get_last_position());
+        function_state.emit(OpCode::PushConstant.to_instruction(context.add_constant(Object::Integer(0)) as u64), for_statement.token.position);
+        function_state.emit(OpCode::LocalSet.to_instruction(iterator_local_index as u64), for_statement.token.position);
         function_state.emit_opcode_without_position(OpCode::Pop);
 
         // because we just enter a new scope, so we never have a duplicate name here, so can unwrap directly
@@ -478,7 +478,7 @@ impl CompilerState {
 
         let start_loop_position = function_state.get_next_instruction_index();
 
-        function_state.emit(OpCode::ForNext.to_instruction(enumerable_local_index as u64), function_state.get_last_position());
+        function_state.emit(OpCode::ForNext.to_instruction(enumerable_local_index as u64), for_statement.token.position);
 
         let jump_to_end_if_true_instruction_index = function_state.get_next_instruction_index();
         function_state.emit_opcode_without_position(OpCode::JumpIf);

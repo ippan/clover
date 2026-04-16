@@ -15,7 +15,7 @@ impl NativeModel for Random {
 impl Random {
     pub fn new_random(_state: &mut State, _parameters: &[ Object ]) -> Result<Object, RuntimeError> {
         let random_instance = RandomInstance {
-            random: rand::thread_rng()
+            random: rand::rng()
         };
 
         Ok(Object::NativeInstance(make_reference(random_instance)))
@@ -59,11 +59,11 @@ impl NativeModelInstance for RandomInstance {
 
 impl RandomInstance {
     pub fn next_integer(&mut self, _state: &mut State, _parameters: &[ Object ]) -> Result<Object, RuntimeError> {
-        Ok(Object::Integer(self.random.gen()))
+        Ok(Object::Integer(self.random.random()))
     }
 
     pub fn next_float(&mut self, _state: &mut State, _parameters: &[ Object ]) -> Result<Object, RuntimeError> {
-        Ok(Object::Float(self.random.gen()))
+        Ok(Object::Float(self.random.random()))
     }
 
     pub fn within(&mut self, _state: &mut State, parameters: &[ Object ]) -> Result<Object, RuntimeError> {
@@ -76,14 +76,14 @@ impl RandomInstance {
         Ok(match number {
             Object::Integer(value) => {
                 if *value > 0 {
-                    Object::Integer(self.random.gen_range(0..*value))
+                    Object::Integer(self.random.random_range(0..*value))
                 } else {
                     Object::Integer(0)
                 }
             },
             Object::Float(value) => {
                 if *value > 0.0 {
-                    Object::Float(self.random.gen_range(0.0..*value))
+                    Object::Float(self.random.random_range(0.0..*value))
                 } else {
                     Object::Float(0.0)
                 }
@@ -102,7 +102,7 @@ impl RandomInstance {
         match value {
             Object::Array(array) => {
                 if array.borrow().len() > 0 {
-                    let index = self.random.gen_range(0..array.borrow().len());
+                    let index = self.random.random_range(0..array.borrow().len());
                     Ok(array.borrow()[index].clone())
                 } else {
                     Ok(Object::Null)
